@@ -1,14 +1,14 @@
 module.exports=function(conn){
 	var schema = mongoose.Schema({
-		partyId: {type: mongoose.Schema.Types.ObjectId, ref: 'items', default:null},
+		partyId: {type: mongoose.Schema.Types.ObjectId, ref: 'parties', default:null},
 		generated: {type: Boolean, default: false},
 		cancelled: {type: Boolean, default: false},
-		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','CustomerAgency','VendorAgency']},
+		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','Both','Agency']},
 		mainParty: {type: mongoose.Schema.Types.ObjectId, 
 			ref: 'parties',
 			validate: {
 				validator: function(v) {
-					if((this.partyType=='CustomerAgeny' || this.partyType=='VendorAgeny') && ( (v || '') == '')){
+					if((this.partyType=='Ageny') && ( (v || '') == '')){
 						return false
 					}else{
 						return true

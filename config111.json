@@ -1,0 +1,11 @@
+{
+	"httpserver":{
+		"port" : 3600
+	},
+	"mongodb": {
+		"address":"mongodb://localhost:27017/etuliaportal",
+		"userAddress":"mongodb://localhost:27017/"
+	},
+	"tmpDir11":"/tmp",
+	"tmpDir":"C:\\arge\\tr216\\temp"
+}

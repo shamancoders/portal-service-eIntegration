@@ -1,5 +1,3 @@
-var colors=require('colors');
-
 function yyyymmddhhmmss(tarih, middleChar) {
     var yyyy = tarih.getFullYear().toString();
     var mm = (tarih.getMonth() + 1).toString(); // getMonth() is zero-based
@@ -17,9 +15,24 @@ function simdi()
 }
 
 global.eventLog=function(obj,...placeholders){
+    // if ( typeof obj === 'string' )
+    //     placeholders.unshift( simdi() + " " + obj );
+    // else
+    // {
+    //     placeholders.unshift( obj );
+    //     placeholders.unshift( simdi() + " %j" );
+    // }
     console.log(simdi() ,obj,...placeholders)
 }
 
 global.errorLog=function(obj,...placeholders){
+    // if ( typeof obj === 'string' )
+    //     placeholders.unshift( simdi() + " " + obj );
+    // else
+    // {
+    //     placeholders.unshift( obj );
+    //     placeholders.unshift( simdi() + " %j" );
+    // }
     console.error(simdi().red ,obj,...placeholders)
+    // console.error(placeholders)
 }

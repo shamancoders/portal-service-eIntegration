@@ -2,6 +2,7 @@ var nodemailer=require('nodemailer')
 var htmlToText = require('html-to-text')
 var emailvalidator = require("email-validator")
 
+
 exports.sendMail = function (mailto,subject, body,cb){
     try {
         if(!emailvalidator.validate(mailto))

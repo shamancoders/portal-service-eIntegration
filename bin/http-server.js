@@ -2,17 +2,10 @@ module.exports =(app)=>{
 	var debug = require('debug')('template:server')
 	var http = require('http')
 
-/**
- * Get port from environment and store in Express.
- */
+	var port = normalizePort(app.get('port'))
 
- var port = normalizePort(app.get('port'))
- 
-/**
- * Create HTTP server.
- */
+	var server = http.createServer(app)
 
- var server = http.createServer(app)
 
 /**
  * Listen on provided port, on all network interfaces.

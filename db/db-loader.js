@@ -285,7 +285,8 @@ exports.connectDatabase=function(dbDoc,cb){
 		return cb(null)
 	}
 
-	var usrConn = mongoose.createConnection(dbDoc.userDbHost + dbDoc.userDb,{ useNewUrlParser: true, useUnifiedTopology:true, autoIndex: true})
+	//var usrConn = mongoose.createConnection(dbDoc.userDbHost + dbDoc.userDb,{ useNewUrlParser: true, useUnifiedTopology:true, autoIndex: true})
+	var usrConn = mongoose.createConnection(config.mongodb.userAddress + dbDoc.userDb,{ useNewUrlParser: true, useUnifiedTopology:true, autoIndex: true})
 	usrConn.on('connected', function () {  
 		eventLog(`repository db ${dbDoc.dbName.brightGreen} connected.`)
 		repoDb[dbDoc._id]={}
@@ -296,7 +297,8 @@ exports.connectDatabase=function(dbDoc,cb){
 		repoDb[dbDoc._id]['_id']=dbDoc._id
 		repoDb[dbDoc._id]['owner']=dbDoc.owner
 		repoDb[dbDoc._id]['userDb']=dbDoc.userDb
-		repoDb[dbDoc._id]['userDbHost']=dbDoc.userDbHost
+		// repoDb[dbDoc._id]['userDbHost']=dbDoc.userDbHost
+		repoDb[dbDoc._id]['userDbHost']=config.mongodb.userAddress
 		repoDb[dbDoc._id]['dbName']=dbDoc.dbName
 		repoDb[dbDoc._id]['authorizedMembers']=dbDoc.authorizedMembers || []
 		repoDb[dbDoc._id]['conn']=usrConn
@@ -306,7 +308,7 @@ exports.connectDatabase=function(dbDoc,cb){
 	}) 
 
 	usrConn.on('error',function (err) {  
-		errorLog('Mongoose user connection "' + userDbHost + userDb + '" error: ', err)
+		errorLog('Mongoose user connection "' + config.mongodb.userAddress + dbDoc.userDb + '" error: ', err)
 		if(cb)
 			cb(err)
 	}) 

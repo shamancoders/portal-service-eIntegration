@@ -1,11 +1,11 @@
 module.exports=function(conn){
 	var schema = mongoose.Schema({
-		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','CustomerAgency','VendorAgency']},
+		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','Both','Agency'],index:true},
 		mainParty: {type: mongoose.Schema.Types.ObjectId, 
 			ref: 'parties',
 			validate: {
 				validator: function(v) {
-					if((this.partyType=='CustomerAgeny' || this.partyType=='VendorAgeny') && ( (v || '') == '')){
+					if((this.partyType=='Ageny') && ( (v || '') == '')){
 						return false
 					}else{
 						return true
@@ -30,7 +30,7 @@ module.exports=function(conn){
 		},
 		contact:dbType.contactType,
 		person:dbType.personType,
-		tags:{ type: String, trim:true, default: ''},
+		tags:{ type: String, trim:true, default: '',index:true},
 		passive:{type:Boolean , default:false},
 		createdDate: { type: Date,default: Date.now},
 		modifiedDate:{ type: Date,default: Date.now}
