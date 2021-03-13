@@ -203,7 +203,7 @@ exports.delete=(endpoint, cb)=>{
 
 module.exports=(url)=>{
 	return {
-		get:(dbModel, endpoint, params, cb)=>{
+		get:function (dbModel, endpoint, params, cb){
 			if(dbModel){
 				endpoint=`${url}/${dbModel._id}${endpoint}`
 			}else{
@@ -211,7 +211,7 @@ module.exports=(url)=>{
 			}
 			return exports.get(endpoint,params,cb)
 		},
-		getFile:(dbModel, endpoint, params, cb)=>{
+		getFile:function (dbModel, endpoint, params, cb){
 			if(dbModel){
 				endpoint=`${url}/${dbModel._id}${endpoint}`
 			}else{
@@ -219,7 +219,7 @@ module.exports=(url)=>{
 			}
 			return exports.getFile(endpoint,params,cb)
 		},
-		post:(dbModel, endpoint, jsonData, cb)=>{
+		post:function (dbModel, endpoint, jsonData, cb){
 			if(dbModel){
 				endpoint=`${url}/${dbModel._id}${endpoint}`
 			}else{
@@ -227,7 +227,7 @@ module.exports=(url)=>{
 			}
 			return exports.post(endpoint, jsonData,cb)
 		},
-		put:(dbModel, endpoint, jsonData, cb)=>{
+		put:function (dbModel, endpoint, jsonData, cb){
 			if(dbModel){
 				endpoint=`${url}/${dbModel._id}${endpoint}`
 			}else{
@@ -235,7 +235,7 @@ module.exports=(url)=>{
 			}
 			return exports.put(endpoint,jsonData,cb)
 		},
-		delete:(dbModel, endpoint, cb)=>{
+		delete:function (dbModel, endpoint, cb){
 			if(dbModel){
 				endpoint=`${url}/${dbModel._id}${endpoint}`
 			}else{

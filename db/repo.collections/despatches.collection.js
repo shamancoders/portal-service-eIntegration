@@ -1,7 +1,7 @@
 module.exports=function(conn){
     var schema = mongoose.Schema({
         ioType :{ type: Number,default: 0, index:true}, // 0 - cikis , 1- giris
-        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: true},
+        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: true,index:true},
         // location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', required: [true, 'Lokasyon gereklidir']},
         location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations'},
         subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations'},

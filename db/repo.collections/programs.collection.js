@@ -2,7 +2,7 @@ module.exports=function(conn){
 	var schema = mongoose.Schema({
 		name: {type: String, required: [true,'Isim gereklidir.']},
 		// showButtonText: {type: Boolean, default: false},
-		type: {type: String, required: [true,'Program türü gereklidir.'],enum:['file-importer','file-exporter','connector-importer','connector-exporter','email','sms']},
+		type: {type: String, required: [true,'Program türü gereklidir.'],enum:['collection-process','file-importer','file-exporter','connector-importer','connector-exporter','email','sms']},
 		// icon: {type :String, default:''},		
 		// class: {type :String, default:''},		
 		collections:[{

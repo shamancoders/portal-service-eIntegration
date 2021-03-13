@@ -1,4 +1,5 @@
-var schema = mongoose.Schema({
+module.exports=function(conn){
+	var schema = mongoose.Schema({
     username: {type:String, required: true},
     password: {type :String, default: ""},
     role: {type :String, default: "user"},
@@ -12,44 +13,29 @@ var schema = mongoose.Schema({
     createdDate: { type: Date,default: Date.now},
     modifiedDate:{ type: Date,default: Date.now},
     passive: {type: Boolean, default: false}
-})
+	})
 
-schema.pre('save',function(next){
-	next()
-	//bir seyler ters giderse 
-	// next(new Error('ters giden birseyler var'))
-})
-schema.pre('remove',function(next){
-	next()
-})
+	schema.pre('save', function(next) {
+		next()
+	})
+	schema.pre('remove', function(next) {
+		next()
+	})
+
+	schema.pre('remove', true, function(next, done) {
+		next()
+	})
+
+	schema.on('init', function(model) {
+
+	})
+
+	schema.plugin(mongoosePaginate)
 
 
-schema.pre('remove', true, function (next, done) {
-  	next()
-	//bir seyler ters giderse 
-	// next(new Error('ters giden birseyler var'))
-})
+	var collectionName='sysusers'
+	var model=conn.model(collectionName, schema)
 
-schema.on('init', function (model) {
-
-})
-
-var model=dbconn.model('sysusers', schema)
-model.countDocuments({},(err,c)=>{
-    if(!err){
-        if(c==0){
-            var newDoc=new model({
-                username:'admin',
-                password:'atabar18',
-                role:'admin',
-                name:'Alamut',
-                lastName:'Castle',
-                gender:'male',
-                auth:{createUser:true,modifyMembers:true}
-            })
-            newDoc.save()
-        }
-    }
-})
-
-module.exports=model
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	return model
+}

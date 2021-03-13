@@ -10,8 +10,9 @@ var favicon = require('serve-favicon')
 
 var indexRouter = require('./routes/index')
 var dbLoader = require('./db/db-loader')
+var httpServer=require('./bin/http-server.js')
 
-var app = express()
+global.app = express()
 var cors = require('cors')
 app.use(cors())
 var flash = require('connect-flash')
@@ -29,36 +30,36 @@ app.set('name',require('./package').name)
 app.set('version',require('./package').version)
 app.set('port',config.httpserver.port)
 
-module.exports=(cb)=>{
-	dbLoader((err)=>{
-		if(!err){
-			global.taskHelper=require('./bin/taskhelper')
-			global.eDespatch=require('./eDespatch/services/e-despatch')
-			global.eInvoice=require('./eInvoice/services/e-invoice')
-			eDespatch.start()
-			// eInvoice.start()
-			
-
-			cb(null,app)
-
-		}else{
-			cb(err)
-		}
-
+module.exports=()=>{
+	httpServer(app,(err,server,port)=>{
+		dbLoader((err)=>{
+			if(!err){
+				
+				global.taskHelper=require('./bin/taskhelper')
+				global.eDespatch=require('./eDespatch/services/e-despatch')
+				global.eInvoice=require('./eInvoice/services/e-invoice')
+				eDespatch.start()
+				// eInvoice.start()
+				
+				refreshRepoDb()
+			}else{
+				errorLog(err)
+			}
+		})
 	})
 }
+
 
 process.on('uncaughtException', function (err) {
 	errorLog('Caught exception: ', err)
 	
-	if(config.status!='development'){
-		mail.sendErrorMail(`Err ${config.status} ${app.get('name')}`,err,(mailErr,info)=>{
-			if(mailErr)
-				console.log(`mailErr:`,mailErr)
-			console.log(`mail info:`,info)
-			// process.exit(0)
-		})
-	}
+	// mail.sendErrorMail(`Err ${config.status} ${app.get('name')}`,err,(mailErr,info)=>{
+	// 	if(mailErr)
+	// 		console.log(`mailErr:`,mailErr)
+	// 	console.log(`mail info:`,info)
+	// 	process.exit(0)
+	// })
+
 })
 
 /* [CONTROLLER TEST] */

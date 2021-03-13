@@ -1,3 +1,3 @@
 @echo off
-title eIntegration Service
+title eIntegration
 nodemon start.js -development

@@ -1,34 +1,17 @@
-var processList=[]
-var repeatInterval=10000
-var SinifGrubu=require('./uyumsoft/DespatchIntegration.class.js')
-var downloadInterval=5000 
 
-var serviceName=`[eDespatch]`.yellow
+var SinifGrubu=require('./uyumsoft/DespatchIntegration.class.js')
+var downloadInterval=config.downloadInterval || 5000 
+
+var serviceName=`eDespatch`
+var defaultServiceName=`eDespatch`
 var ioBox=(ioType)=>{ return ioType==0?'Outbox':'Inbox'}
 var taskListener=require('./task-listener')
 global.WcfHelper=require('../../bin/wcf-helper').WcfHelper
 
-exports.syncDespatches=(dbModel,ioType,integrator,callback)=>{
-	eventLog(`${serviceName} ${dbModel.dbName.cyan} syncDespatches ${ioBox(ioType)} started `)
-	dbModel.temp_table.find({docType:`eDespatch_sync${ioBox(ioType)}List`,status:'',docId2:integrator._id},(err,docs)=>{
-		if(!err){
-			iteration(docs,
-			          (listItem,cb)=>{ 
-			          	exports.getDespatch(dbModel,ioType,integrator,listItem,cb)
-			          },
-			          downloadInterval,true,
-			          (err,result)=>{
-			          	callback(err,result)
-			          })
-		}else{
-			callback(err)
-		}
-	})
-}
-
 exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
+	var logPrefix=`${dbModel.nameLog} ${defaultServiceName.green + '/GetDespatch'.cyan + '/' + ioBox(ioType)},`
 	dbModel.despatches.findOne({ioType:ioType, eIntegrator:listItem.docId2,'uuid.value':listItem.docId},(err,doc)=>{
-		if(!err){
+		if(dberr(err,callback)){
 			if(doc==null){
 				var GetDespatch=(query,cb)=>{
 					if(ioType==0){
@@ -38,31 +21,31 @@ exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
 					}
 				}
 				GetDespatch(listItem.docId,(err,data)=>{
-					if(!err){
+					if(dberr(err,callback)){
 						var newDoc=new dbModel.despatches(data.value.despatchAdvice)
 						newDoc.eIntegrator=integrator._id
 						newDoc.ioType=ioType
 						newDoc.despatchStatus=listItem.document.statusEnum
-						if(newDoc.profileId.value=='TEMELSEVKIRSALIYESI')
+						if(newDoc.profileId.value=='TEMELSEVKIRSALIYESI'){
 							newDoc.profileId.value='TEMELIRSALIYE'
+						}
 
 
 						newDoc.save((err,newDoc2)=>{
 							if(!err){
-								eventLog(`${serviceName} ${dbModel.dbName.cyan} Despatch_${ioBox(ioType)}:${newDoc2.ID.value} indirildi`)
+								eventLog(`${logPrefix} ${newDoc2.ID.value} indirildi`)
 							}
 							listItem.status='Downloaded'
 							listItem.save((err)=>{
-								callback(err)
+								if(callback)
+									callback(err)
 							})
 							
 						})
-					}else{
-						callback(err)
 					}
 				})
 			}else{
-				eventLog(`getDespatch ${ioBox(ioType)} ${doc.ID.value} zaten var `)
+				eventLog(`${logPrefix} ${doc.ID.value} zaten var`)
 				if(ioType==0){
 					listItem.status='Uploaded'
 				}else{
@@ -70,17 +53,42 @@ exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
 				}
 				
 				listItem.save((err)=>{
-					callback(err)
+					if(callback)
+						callback(err)
 				})
 			}
-		}else{
-			callback(err)
 		}
 	})
 }
 
-exports.syncDespatchList=(dbModel,ioType,integrator,callback)=>{
-	exports.syncDespatchList_queryModel(dbModel,ioType,integrator,(err,query)=>{
+function syncDespatches(dbModel,ioType,integrator,srvcName,callback){
+	var logPrefix=`${dbModel.nameLog} ${srvcName.green}, sync`
+	var limit=0
+	if(config.status=='development'){
+		limit=3
+	}
+	eventLog(`${logPrefix} started `)
+
+	dbModel.temp_table.find({docType:`eDespatch_sync${ioBox(ioType)}List`,status:'',docId2:integrator._id}).limit(limit).exec((err,docs)=>{
+		if(dberr(err,callback)){
+			iteration(docs,(listItem,cb)=>{ exports.getDespatch(dbModel,ioType,integrator,listItem,cb)}, downloadInterval,true,(err,result)=>{
+				if(err)
+					errorLog(`${logPrefix} error:`,err)
+				else
+					eventLog(`${logPrefix} OK`)
+
+				if(callback)
+					callback(err,result)
+			})
+		}
+	})
+}
+
+
+
+function syncDespatchList(dbModel,ioType,integrator,srvcName, callback){
+	var logPrefix=`${dbModel.nameLog} ${srvcName.green}, syncList`
+	syncDespatchList_queryModel(dbModel,ioType,integrator,(err,query)=>{
 		var GetDespatchList=(query,cb)=>{
 			if(ioType==0){
 				integrator.despatchIntegration.GetOutboxDespatchList(query,cb)
@@ -91,18 +99,18 @@ exports.syncDespatchList=(dbModel,ioType,integrator,callback)=>{
 
 		function indir(cb){
 			GetDespatchList(query,(err,data)=>{
-				if(!err){
+				if(dberr(err,cb)){
 					if(data.value.attr.totalPages==0) 
 						return cb(null)
-					eventLog(`${serviceName} ${dbModel.dbName.cyan} syncDespatchList ${ioBox(ioType)} page:${data.value.attr.pageIndex+1}/${data.value.attr.totalPages}`)
+					eventLog(`${logPrefix} page:${data.value.attr.pageIndex+1}/${data.value.attr.totalPages}`)
 					if(!Array.isArray(data.value.items)){
 						data.value.items=[clone(data.value.items)]
 					}
 					data.value.items.forEach((e)=>{ e._integratorId=integrator._id })
-					iteration(data.value.items,(item,cb)=>{ exports.insertTempTable(dbModel,ioType,item,cb)},0,false,(err)=>{
-						if(!err){
+					iteration(data.value.items,(item,cb)=>{ insertTempTable(dbModel,ioType,item,cb)},0,false,(err)=>{
+						if(dberr(err,cb)){
 							if(config.status=='development'){
-								if(data.value.attr.pageIndex<data.value.attr.totalPages-1 && data.value.attr.pageIndex<3 ){
+								if(data.value.attr.pageIndex<data.value.attr.totalPages-1 && data.value.attr.pageIndex<2 ){
 									query.PageIndex++
 									setTimeout(indir,downloadInterval,cb)
 								}else{
@@ -116,26 +124,21 @@ exports.syncDespatchList=(dbModel,ioType,integrator,callback)=>{
 									cb(null)
 								}
 							}
-							
-						}else{
-							cb(err)
 						}
 					})
-				}else{
-					cb(err)
 				}
 			})
 		}
 
 		indir((err)=>{
-			callback(err)
+			if(callback)
+				callback(err)
 		})
-		
 	})
-	
 }
 
-exports.syncDespatchList_queryModel=(dbModel,ioType,integrator,cb)=>{
+
+function syncDespatchList_queryModel(dbModel,ioType,integrator,cb){
 	var query=ioType==0?new SinifGrubu.OutboxDespatchListQueryModel():new SinifGrubu.InboxDespatchListQueryModel()
 
 	
@@ -161,7 +164,42 @@ exports.syncDespatchList_queryModel=(dbModel,ioType,integrator,cb)=>{
 	})
 }
 
-exports.insertTempTable=(dbModel,ioType,item,callback)=>{
+
+function downloadDespatches(dbModel,ioType,srvcName, callback){
+	var logPrefix=`${dbModel.nameLog} ${srvcName.green}`
+	dbModel.integrators.find({passive:false},(err,docs)=>{
+		if(dberr(err,callback)){
+			var integrators=[]
+			docs.forEach((e)=>{
+				if(e.despatch.url!='' && e.despatch.username!='' && e.despatch.password!=''){
+					var itg=e.toJSON()
+					itg['despatchIntegration']=new SinifGrubu.DespatchIntegration(itg.despatch.url,itg.despatch.username,itg.despatch.password)
+					integrators.push(itg)
+				}
+			})
+
+			iteration(integrators,(item,cb)=>{ syncDespatchList(dbModel,ioType,item,srvcName,cb)},0,true,(err,result)=>{
+				if(err)
+					errorLog(`${logPrefix}, syncList error:`,err)
+				else
+					eventLog(`${logPrefix}, syncList OK`)
+
+				iteration(integrators,(item,cb)=>{ syncDespatches(dbModel,ioType,item,srvcName,cb)},0,true,(err,result)=>{
+					if(err)
+						errorLog(`${logPrefix}, sync error:`,err)
+					else
+						eventLog(`${logPrefix}, sync OK`)
+
+					if(callback)
+						callback()
+				})
+			})
+		}
+	})
+}
+
+
+function insertTempTable(dbModel,ioType,item,callback){
 	if(item['statusEnum']=='Error')
 		return callback(null)
 	var filter={
@@ -205,8 +243,9 @@ exports.insertTempTable=(dbModel,ioType,item,callback)=>{
 
 
 function defaultStartDate(){
+
 	if(config.status=='development'){
-		return (new Date((new Date()).getFullYear(),6,11,0,0,0)).toISOString()
+		return (new Date((new Date()).getFullYear(),(new Date()).getMonth(),(new Date()).getDate(),0,0,0)).addDays(-10).toISOString()
 	}else{
 		return (new Date((new Date()).getFullYear(),0,1,0,0,0)).toISOString()
 	}
@@ -237,6 +276,7 @@ exports.logs=(dbModel,despatchDoc,callback)=>{
 		
 	})
 }
+
 
 
 exports.xsltView=(dbModel,despatchDoc,callback)=>{
@@ -304,7 +344,7 @@ exports.sendToGib=(dbModel,despatchDoc,cb)=>{
 				}
 				despatchDoc.buyerCustomerParty.party=clone(despatchDoc.deliveryCustomerParty.party)
 
-				// if(despatchDoc.uuid.value=='' || despatchDoc.despatchStatus=='Error')
+			
 				despatchDoc.uuid.value=uuid.v4()
 				
 				if(xsltData){
@@ -430,7 +470,7 @@ exports.sendReceiptAdvice=(dbModel,receiptAdviceDoc,cb)=>{
 
 }
 
-exports.queryDespatchStatus=(dbModel,despatchDoc,cb)=>{
+function queryDespatchStatus(dbModel,despatchDoc,cb){
 	try{
 		if(!despatchDoc.eIntegrator)
 			return cb(null)
@@ -450,15 +490,15 @@ exports.queryDespatchStatus=(dbModel,despatchDoc,cb)=>{
 			PageSize:1
 		}
 		GetDespatchList(query,(err,data)=>{
-			if(!err){
+			if(dberr(err,cb)){
 				if(!data.value)
 					return cb(null)
 				if(!data.value.items)
 					return cb(null)
 
-				if(!Array.isArray(data.value.items)){
+				if(!Array.isArray(data.value.items))
 					data.value.items=[clone(data.value.items)]
-				}
+				
 				var obj={
 					_id:despatchDoc._id,
 					uuid:data.value.items[0].despatchId,
@@ -469,119 +509,181 @@ exports.queryDespatchStatus=(dbModel,despatchDoc,cb)=>{
 				}
 				if(despatchDoc.despatchStatus!=data.value.items[0].statusEnum){
 					dbModel.despatches.updateMany({_id:despatchDoc._id},{$set:{despatchStatus:data.value.items[0].statusEnum}},{multi:false},(err)=>{
-						if(!err){
+						if(dberr(err,cb)){
 							cb(null,obj)
-						}else{
-							cb(err)
 						}
 					})
 				}else{
 					cb(null,obj)
 				}
-			}else{
-				cb(err)
 			}
 		})
-
-
 	}catch(e){
 		cb(e)
 	}
 }
 
-function repeatDownloadDespatches(dbModel){
-	dbModel.integrators.find({passive:false},(err,docs)=>{
-		if(!err){
-			var integrators=[]
-			docs.forEach((e)=>{
-				if(e.despatch.url!='' && e.despatch.username!='' && e.despatch.password!=''){
-					var itg=e.toJSON()
-					itg['despatchIntegration']=new SinifGrubu.DespatchIntegration(itg.despatch.url,itg.despatch.username,itg.despatch.password)
-					integrators.push(itg)
-				}
-			})
-
-			iteration(integrators,(item,cb)=>{ exports.syncDespatchList(dbModel,0,item,cb)},0,true,(err,result)=>{
-				if(err)
-					errorLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(0)}List  error:`,err)
-				else
-					eventLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(0)}List\tok`)
-
-				iteration(integrators,(item,cb)=>{ exports.syncDespatchList(dbModel,1,item,cb)},0,true,(err,result)=>{
-					if(err)
-						errorLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(1)}List  error:`,err)
-					else
-						eventLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(1)}List\tok`)
-
-					iteration(integrators,(item,cb)=>{ exports.syncDespatches(dbModel,0,item,cb)},0,true,(err,result)=>{
-						if(err)
-							errorLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(0)}Despatches  error:`,err)
-						else
-							eventLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(0)}Despatches\tok`)
-
-						iteration(integrators,(item,cb)=>{ exports.syncDespatches(dbModel,1,item,cb)},0,true,(err,result)=>{
-							if(err)
-								errorLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(1)}Despatches  error:`,err)
-							else
-								eventLog(`${serviceName} ${dbModel.dbName.cyan} ${ioBox(1)}Despatches\tok`)
-
-
-							eventLog(`${serviceName} ${dbModel.dbName.cyan} finished`)
-							setTimeout(()=>{repeatDownloadDespatches(dbModel)},repeatInterval)
-						})
-					})
-				})
-			})
-
-		}else{
-			errorLog(`${serviceName} error on ${dbModel.dbName}:`,err)
-			setTimeout(()=>{repeatDownloadDespatches(dbModel)},repeatInterval)
-		}
-	})
-}
-
-function repeatCheckDespatcheStatus(dbModel){
+function checkDespatcheStatus(dbModel,srvcName, callback){
+	var logPrefix=`${dbModel.nameLog} ${srvcName.green}`
 	var baslamaTarihi=(new Date()).addDays(-15).yyyymmdd()
+	if(config.status=='development'){
+		baslamaTarihi=(new Date()).addDays(-90).yyyymmdd()
+	}
+	var options={page: 1, limit:500000,
+		populate:[
+		{path:'eIntegrator',select:'_id eIntegrator despatch'}
+		],
+		
+		select:'_id ioType eIntegrator ID uuid issueDate issueTime despatchStatus',
+		sort:{'issueDate.value':'desc' , 'ID.value':'desc'}
+	}
+
 	var filter={
 		ioType:0,
 		despatchStatus:{$nin:['Approved','PartialApproved','Declined','Canceled','Cancelled']},
 		'issueDate.value':{$gte:baslamaTarihi}
 	}
+	
+	dbModel.despatches.paginate(filter, options, (err,resp)=>{
+		if(dberr(err,callback)){
+			
+			eventLog(`${logPrefix}, count:${resp.docs.length}`)
+			
+			var index=0
 
-	dbModel.despatches.find(filter).populate('eIntegrator').exec((err,docs)=>{
-		if(!err){
-			eventLog(`${serviceName} ${dbModel.dbName.cyan} status check count:`,docs.length)
-			iteration(docs,(item,cb)=>{ exports.queryDespatchStatus(dbModel,item,cb)},0,true,(err,result)=>{
-				if(!err){
-					eventLog(`${serviceName} ${dbModel.dbName.cyan} repeatCheckDespatcheStatus result:`,result.length)
-				}else{
-					errorLog(`${serviceName} ${dbModel.dbName.cyan} repeatCheckDespatcheStatus err:`,err)
-				}
+			function calistir(cb){
+				if(index>=resp.docs.length)
+					return cb()
+				if(config.status=='development' && index>=5)
+					return cb()
 
-				setTimeout(()=>{repeatCheckDespatcheStatus(dbModel)},repeatInterval)
+				queryDespatchStatus(dbModel,resp.docs[index],(err,result)=>{
+					if(err){
+						errorLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length} ${resp.docs[index].ID.value}  error:`,err)
+					}else{
+						eventLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length}`)
+					}
+					index++
+					setTimeout(calistir,10,cb)
+				})
+			}
+
+			calistir(()=>{
+				if(callback)
+					callback(err)
 			})
+		}
+	})
+}
 
-		}else{
-			errorLog(err)
-			setTimeout(()=>{repeatCheckDespatcheStatus(dbModel)},repeatInterval)
+
+// function task_sendReceiptAdvice(dbModel,srvcName,callback){
+// 	var logPrefix=`${dbModel.nameLog} ${srvcName.green}`
+// 	dbModel.tasks.find({taskType:'edespatch_send_receipt_advice',status:'pending'},(err,docs)=>{
+// 		if(dberr(err,callback)){
+// 			if(docs.length>0){
+// 				eventLog(`${dbModel.nameLog} Srvc:${serviceName.cyan}, task count:${docs.length}`)
+
+// 				iteration(docs,(item,cb)=>{ 
+// 					exports.sendReceiptAdvice(dbModel,(item.toJSON()).document,(err)=>{
+// 						if(!err){
+// 							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'completed'}},(err)=>{
+// 								cb(err)
+// 							})
+// 						}else{
+// 							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'error',error:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+// 								dbModel.despatches_receipt_advice.updateMany({_id:item.documentId},{$set:{receiptStatus:'Error',receiptErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+// 									cb(null)
+// 								})
+// 							})
+// 						}
+// 					})
+// 				},0,true,(err,result)=>{
+					
+// 					if(callback)
+// 						callback(err)
+// 				})
+// 			}else{
+// 				if(callback)
+// 						callback()
+// 			}
+// 		}
+// 	})
+// }
+
+function task_sentToGib(dbModel,srvcName,callback){
+	var logPrefix=`${dbModel.nameLog} ${srvcName.green}`
+	dbModel.tasks.find({taskType:'edespatch_send_to_gib',status:'pending'},(err,docs)=>{
+		if(dberr(err,callback)){
+			if(docs.length>0){
+				eventLog(`${dbModel.nameLog} Srvc:${serviceName.cyan}, task count:${docs.length}`)
+				iteration(docs,(item,cb)=>{ 
+					exports.sendToGib(dbModel,item.document,(err)=>{
+						if(!err){
+							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'completed'}},(err)=>{
+								cb(err)
+							})
+						}else{
+							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'error',error:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+								dbModel.despatches.updateMany({_id:item.documentId},{$set:{despatchStatus:'Error',despatchErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+									cb(null)
+								})
+							})
+						}
+					})
+				},0,true,(err,result)=>{
+					if(callback)
+						callback(err)
+				})
+			}else{
+				if(callback)
+						callback()
+			}
 		}
 	})
 }
 
 exports.start=()=>{
-	setTimeout(()=>{
-		Object.keys(repoDb).forEach((e)=>{
-			repeatDownloadDespatches(repoDb[e])
-			eventLog(`${serviceName} download working on ${repoDb[e].dbName.cyan}`)
+	
+	// runServiceOnAllUserDb({
+	// 	filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
+	// 	name:'eDespatch/download/outbox',
+	// 	repeatInterval:config.repeatInterval || 60000
+	// })
 
-			repeatCheckDespatcheStatus(repoDb[e])
-			eventLog(`${serviceName} checkStatus working on ${repoDb[e].dbName.cyan}`)
+	// runServiceOnAllUserDb({
+	// 	filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,1,`eDespatch/${'download'.cyan}/inbox`,cb) },
+	// 	name:'eDespatch/download/inbox',
+	// 	repeatInterval:config.repeatInterval || 60000
+	// })
 
-			taskListener.start(repoDb[e])
-			eventLog(`${serviceName} tasks listening on ${repoDb[e].dbName.cyan}`)
+	runServiceOnAllUserDb({
+		filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+		serviceFunc:(dbModel,cb)=>{ checkDespatcheStatus(dbModel,`eDespatch/${'checkStatus'.cyan}`,cb) },
+		name:'eDespatch/checkStatus',
+		repeatInterval:config.repeatInterval || 60000
+	})
 
-		})
+	runServiceOnAllUserDb({
+		filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+		serviceFunc:(dbModel,cb)=>{
+			task_sentToGib(dbModel,`eDespatch/${'task'.cyan}/sentToGib`,cb)
+		},
+		name:'eDespatch/task/sentToGib',
+		repeatInterval:config.repeatInterval || 6000
+	})
 
-	},10000) // qwerty
-	// },1000)
+	// runServiceOnAllUserDb({
+	// 	filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+	// 	serviceFunc:(dbModel,cb)=>{
+	// 		taskListener.sendReceiptAdvice(dbModel,`${serviceName}/sendReceiptAdvice`,cb)
+	// 	},
+	// 	name:'eDespatch/task/sendReceiptAdvice',
+	// 	repeatInterval:config.repeatInterval || 60000
+	// })
+
+	
+	
 }

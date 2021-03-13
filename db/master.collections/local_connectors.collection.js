@@ -1,4 +1,5 @@
-var schema = mongoose.Schema({
+module.exports=function(conn){
+	var schema = mongoose.Schema({
     connectorId: {type: Number, default:0, unique : true},
     connectorPass: {type: String, required: true},
     uuid: {type: String, required: true,default:""},
@@ -16,45 +17,29 @@ var schema = mongoose.Schema({
     lastOnline:{ type: Date,default: Date.now},
     lastError: {type: String, default:""},
     passive: {type: Boolean, default: false}
-})
+	})
 
-schema.pre('save', function(next) {
-    if(this.connectorId==0){
-        this.connectorId=112600420
-        dbconn.model('etulia_connectors').findOne({}).sort({connectorId:-1}).exec((err,doc)=>{
-            if(!err){
-                if(doc!=null){
-                    this.connectorId=doc.connectorId+1
-                }
-            }else{
-                console.log('save error:',err)
-            }
-            next()
-        })
-        
-    }else{
-        next()
-    }
-    
-    //bir seyler ters giderse 
-    // next(new Error('ters giden birseyler var'))
-})
-schema.pre('remove', function(next) {
-    next()
-})
+	schema.pre('save', function(next) {
+		next()
+	})
+	schema.pre('remove', function(next) {
+		next()
+	})
 
-schema.pre('remove', true, function(next, done) {
-    next()
-    //bir seyler ters giderse 
-    // next(new Error('ters giden birseyler var'))
-})
+	schema.pre('remove', true, function(next, done) {
+		next()
+	})
+
+	schema.on('init', function(model) {
+
+	})
+	
+	schema.plugin(mongoosePaginate)
 
 
+	var collectionName='local_connectors'
+	var model=conn.model(collectionName, schema)
 
-
-schema.on('init', function(model) {
- 
-})
-
-
-module.exports = dbconn.model('local_connectors', schema)
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	return model
+}

@@ -1,4 +1,5 @@
-var schema = mongoose.Schema({
+module.exports=function(conn){
+	var schema = mongoose.Schema({
     program:{type: String, default:'default'},
     pos_device:{
         allow:false,
@@ -50,27 +51,29 @@ var schema = mongoose.Schema({
         customers:{canRead:false,canWrite:false,canDelete:false},
         vendors:{canRead:false,canWrite:false,canDelete:false}
     }
-})
+	})
 
-schema.pre('save', function(next) {
-    next()
-    //bir seyler ters giderse 
-    // next(new Error('ters giden birseyler var'))
-})
-schema.pre('remove', function(next) {
-    next()
-})
+	schema.pre('save', function(next) {
+		next()
+	})
+	schema.pre('remove', function(next) {
+		next()
+	})
 
-schema.pre('remove', true, function(next, done) {
-    next()
-    //bir seyler ters giderse 
-    // next(new Error('ters giden birseyler var'))
-})
+	schema.pre('remove', true, function(next, done) {
+		next()
+	})
 
-schema.on('init', function(model) {
+	schema.on('init', function(model) {
 
-})
+	})
 
-schema.plugin(mongoosePaginate)
+	schema.plugin(mongoosePaginate)
 
-module.exports = dbconn.model('modules', schema)
+
+	var collectionName='modules'
+	var model=conn.model(collectionName, schema)
+
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	return model
+}

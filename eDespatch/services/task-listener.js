@@ -1,17 +1,8 @@
-var taskInterval=5000
-
-exports.start=(dbModel)=>{
-	listen_sendReceiptAdvice(dbModel)
-	listen_sentToGib(dbModel)
-}
-
-
-function listen_sendReceiptAdvice(dbModel){
-	var serviceName=`[eDespatch][listen_sendReceiptAdvice]`.yellow
+exports.sendReceiptAdvice11111=(dbModel,serviceName,callback)=>{
 	dbModel.tasks.find({taskType:'edespatch_send_receipt_advice',status:'pending'},(err,docs)=>{
-		if(!err){
+		if(dberr(err,callback)){
 			if(docs.length>0){
-				eventLog(`${serviceName} task count:${docs.length}`)
+				eventLog(`${dbModel.nameLog} Srvc:${serviceName.cyan}, task count:${docs.length}`)
 
 				iteration(docs,(item,cb)=>{ 
 					eDespatch.sendReceiptAdvice(dbModel,(item.toJSON()).document,(err)=>{
@@ -28,37 +19,23 @@ function listen_sendReceiptAdvice(dbModel){
 						}
 					})
 				},0,true,(err,result)=>{
-					if(!err){
-						eventLog(`${serviceName} sendToGib:${dbModel.dbName}\tOK`)
-					}else{
-						errorLog(`${serviceName} sendToGib:${dbModel.dbName} \tError`,err)
-					}
-					setTimeout(()=>{
-						listen_sendReceiptAdvice(dbModel)
-					},taskInterval)
+					
+					if(callback)
+						callback(err)
 				})
 			}else{
-				setTimeout(()=>{
-					listen_sendReceiptAdvice(dbModel)
-				},taskInterval)
+				if(callback)
+						callback()
 			}
-
-
-		}else{
-			errorLog(`${serviceName} Hata:\n`,err)
-			setTimeout(()=>{
-				listen_sendReceiptAdvice(dbModel)
-			},taskInterval)
 		}
 	})
 }
 
-function listen_sentToGib(dbModel){
-	var serviceName=`[eDespatch][listen_sentToGib]`.yellow
+exports.sentToGib11111=(dbModel,serviceName,callback)=>{
 	dbModel.tasks.find({taskType:'edespatch_send_to_gib',status:'pending'},(err,docs)=>{
-		if(!err){
+		if(dberr(err,callback)){
 			if(docs.length>0){
-				eventLog(`${serviceName} task count:${docs.length}`)
+				eventLog(`${dbModel.nameLog} Srvc:${serviceName.cyan}, task count:${docs.length}`)
 				iteration(docs,(item,cb)=>{ 
 					eDespatch.sendToGib(dbModel,item.document,(err)=>{
 						if(!err){
@@ -74,27 +51,13 @@ function listen_sentToGib(dbModel){
 						}
 					})
 				},0,true,(err,result)=>{
-					if(!err){
-						eventLog(`${serviceName} sendToGib:${dbModel.dbName}\tOK`)
-					}else{
-						errorLog(`${serviceName} sendToGib:${dbModel.dbName} \tError`,err)
-					}
-					setTimeout(()=>{
-						listen_sentToGib(dbModel)
-					},taskInterval)
+					if(callback)
+						callback(err)
 				})
 			}else{
-				setTimeout(()=>{
-					listen_sentToGib(dbModel)
-				},taskInterval)
+				if(callback)
+						callback()
 			}
-
-
-		}else{
-			errorLog(`${serviceName} Hata:\n`,err)
-			setTimeout(()=>{
-				listen_sentToGib(dbModel)
-			},taskInterval)
 		}
 	})
 }

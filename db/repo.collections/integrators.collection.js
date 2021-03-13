@@ -1,6 +1,6 @@
 module.exports=function(conn){
     var schema = mongoose.Schema({
-        eIntegrator: {type: String, trim:true, required: [true,'Entegrator seciniz'], default: 'uyumsoft', enum:['uyumsoft','finansbank','innova','logo','turkcell','ingbank']},
+        eIntegrator: {type: String, trim:true, required: [true,'Entegrator seciniz'], default: 'uyumsoft', enum:['uyumsoft','finansbank','innova','logo','turkcell','ingbank'],index:true},
         name: {type: String,  trim:true, required: [true,'Kisa bir isim (Sube vs) gereklidir']},
         invoice:{
             url: {type: String, trim:true, default: ''},

@@ -1,74 +1,39 @@
-module.exports =(app)=>{
-	var debug = require('debug')('template:server')
+module.exports =(app,cb)=>{
 	var http = require('http')
-
-	var port = normalizePort(app.get('port'))
-
+	var port = app.get('port')
 	var server = http.createServer(app)
 
+	server.listen(port)
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+	server.on('error', (err)=>{
+		if (err.syscall !== 'listen') 
+			throw err
 
- server.listen(port)
- server.on('error', onError)
- server.on('listening', onListening)
+		switch (err.code) {
+			case 'EACCES':
+			console.error(`Port: ${port} requires elevated privileges`)
+			process.exit(1)
+			if(cb)
+				cb(err)
+			break
+			case 'EADDRINUSE':
+			console.error(`Port: ${port}is already in use`)
+			process.exit(1)
+			if(cb)
+				cb(err)
+			break
+			default:
+			console.error(`http-server.js error:`,err)
+			if(cb)
+				cb(err)
+			break
+		}
+	})
 
-/**
- * Normalize a port into a number, string, or false.
- */
-
- function normalizePort(val) {
- 	var port = parseInt(val, 10)
-
- 	if (isNaN(port)) 
- 		return val
-
- 	if (port >= 0) 
- 		return port
-
- 	return false
- }
-
-/**
- * Event listener for HTTP server "error" event.
- */
-
- function onError(error) {
- 	if (error.syscall !== 'listen') 
- 		throw error
- 	
-
- 	var bind = typeof port === 'string'
- 	? 'Pipe ' + port
- 	: 'Port ' + port
-
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-  	case 'EACCES':
-  	console.error(bind + ' requires elevated privileges')
-  	process.exit(1)
-  	break
-  	case 'EADDRINUSE':
-  	console.error(bind + ' is already in use')
-  	process.exit(1)
-  	break
-  	default:
-  	throw error
-  }
-}
-
-/**
- * Event listener for HTTP server "listening" event.
- */
-
- function onListening() {
- 	var addr = server.address()
- 	var bind = typeof addr === 'string'
- 	? 'pipe ' + addr
- 	: 'port ' + addr.port
- }
+	server.on('listening', ()=>{
+		if(cb)
+			cb(null,server,port)
+	})
 
 }
 
