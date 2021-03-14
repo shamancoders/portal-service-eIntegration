@@ -23,8 +23,6 @@ module.exports=function(conn){
 	schema.pre('save', function(next) {
 		this.name=`${this.type}_${this.module}`
 		next()
-		//bir seyler ters giderse 
-		// next(new Error('ters giden birseyler var'))
 	})
 	schema.pre('remove', function(next) {
 		next()
@@ -32,8 +30,6 @@ module.exports=function(conn){
 
 	schema.pre('remove', true, function(next, done) {
 		next()
-		//bir seyler ters giderse 
-		// next(new Error('ters giden birseyler var'))
 	})
 
 	schema.on('init', function(model) {
@@ -42,7 +38,7 @@ module.exports=function(conn){
 	
 
 	schema.plugin(mongoosePaginate)
-	// schema.plugin(mongooseAggregatePaginate)
+	schema.plugin(mongooseAggregatePaginate)
 	
 
 	var collectionName='settings'
