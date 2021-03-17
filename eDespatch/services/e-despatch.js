@@ -645,19 +645,19 @@ function task_sentToGib(dbModel,srvcName,callback){
 
 exports.start=()=>{
 	
-	// runServiceOnAllUserDb({
-	// 	filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
-	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
-	// 	name:'eDespatch/download/outbox',
-	// 	repeatInterval:config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+		serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
+		name:'eDespatch/download/outbox',
+		repeatInterval:config.repeatInterval || 60000
+	})
 
-	// runServiceOnAllUserDb({
-	// 	filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
-	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,1,`eDespatch/${'download'.cyan}/inbox`,cb) },
-	// 	name:'eDespatch/download/inbox',
-	// 	repeatInterval:config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
+		serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,1,`eDespatch/${'download'.cyan}/inbox`,cb) },
+		name:'eDespatch/download/inbox',
+		repeatInterval:config.repeatInterval || 60000
+	})
 
 	runServiceOnAllUserDb({
 		filter:(dbModel)=>{ return dbModel.services.eIntegration.eDespatch },
