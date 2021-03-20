@@ -28,11 +28,7 @@ module.exports=(app)=>{
 function clientControllers(app){
 	
 	app.all('/:service/:dbId/*', (req, res, next)=>{
-		if(repoDb[req.params.dbId]==undefined){
-			next(`dbId:'${req.params.dbId}' bulunamadi`)
-		}else{
-			next()
-		}
+		next()
 	})
 
 	app.all('/:service/:dbId/:func', (req, res, next)=>{
@@ -69,7 +65,9 @@ function clientControllers(app){
 				break
 			}
 			var ctl=getController(serviceName,req.params.func)
+			
 			repoDbModel(req.params.dbId,(err,dbModel)=>{
+
 				if(!err){
 					ctl(dbModel, req, res, next, (data)=>{
 						if(data==undefined)

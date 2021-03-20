@@ -66,9 +66,9 @@ if(process.argv[2]=='localhost' || process.argv[2]=='-l' || process.argv[2]=='-d
 }else{
 	global.config.status=global.config.status || 'release'
 }
-if(os.platform()=='win32'){
-	global.config.status='development'
-}
+// if(os.platform()=='win32'){
+// 	global.config.status='development'
+// }
 
 if(global.config[appName]!=undefined){
 	Object.keys(global.config[appName]).forEach((key)=>{
