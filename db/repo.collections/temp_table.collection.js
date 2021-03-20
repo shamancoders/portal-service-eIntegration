@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         docType: {type: String, default: '',required:true,index:true},
         docId: {type: String, default: '',index:true},
         docId2: {type: String, default: '',index:true},
@@ -36,10 +36,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     schema.plugin(mongooseAggregatePaginate)
         
-    var collectionName='temp_table'
-    var model=conn.model(collectionName, schema)
+    let collectionName='temp_table'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    // model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    // model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }

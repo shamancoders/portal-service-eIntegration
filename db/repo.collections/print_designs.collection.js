@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         // module: {type :String, trim:true, enum:[
         //     'recipe','recipe-list','item','item-list','item-product',
         //     'mrp-production-order-list','mrp-production-order','mrp-production-order-pallet','mrp-production-order-packing',
@@ -38,10 +38,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     
 
-    var collectionName='print_designs'
-    var model=conn.model(collectionName, schema)
+    let collectionName='print_designs'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     //model.relations={pos_devices:'localConnector'}
 

@@ -1,5 +1,5 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
 		name: {type: String, required: [true,'Isim gereklidir.']},
 		// showButtonText: {type: Boolean, default: false},
 		type: {type: String, required: [true,'Program türü gereklidir.'],enum:['collection-process','file-importer','file-exporter','connector-importer','connector-exporter','email','sms']},
@@ -72,10 +72,10 @@ module.exports=function(conn){
 	schema.plugin(mongoosePaginate)
 
 
-	var collectionName='programs'
-	var model=conn.model(collectionName, schema)
+	let collectionName='programs'
+	let model=dbModel.conn.model(collectionName, schema)
 
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 
     //model.relations={pos_devices:'localConnector'}
 

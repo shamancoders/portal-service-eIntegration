@@ -1,11 +1,11 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
-        palletType: {type: mongoose.Schema.Types.ObjectId, ref: 'items', required: [true,'Palet tipi gereklidir.'], index:true},
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
+        palletType: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items'], required: [true,'Palet tipi gereklidir.'], index:true},
         name: {type: String, trim:true, required: [true,'isim gereklidir.'] , unique:true},
-        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', default:null},
-        subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', default:null},
+        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations'], default:null},
+        subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', mdl:dbModel['sub_locations'], default:null},
         pack:[{
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', default:null},
+            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items'], default:null},
             lotNo: {type: String, trim:true, default:'' , index:true},
             serialNo: {type: String, trim:true, default:'' , index:true},
             quantity: {type: Number, default: 0, index:true},
@@ -42,10 +42,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
  
 
-    var collectionName='pallets'
-    var model=conn.model(collectionName, schema)
+    let collectionName='pallets'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     model.relations={actions:'inventory.palletId'}
     // model.relations={machines:'location'}

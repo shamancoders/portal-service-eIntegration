@@ -1,8 +1,9 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         ioType :{ type: Number,default: 1}, // 0 - cikis , 1- giris
+        // despatch: {type: mongoose.Schema.Types.ObjectId, ref: 'despatches', mdl:dbModel['despatches'], required: true},
         despatch: {type: mongoose.Schema.Types.ObjectId, ref: 'despatches', required: true},
-        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: true},
+        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', mdl:dbModel['integrators'], required: true},
         profileId: { 
             value: { type: String,default: '', trim:true, enum:['TEMELIRSALIYE'], required: true}
         },
@@ -90,10 +91,10 @@ module.exports=function(conn){
     })
 
 
-    var collectionName='despatches_receipt_advice'
-    var model=conn.model(collectionName, schema)
+    let collectionName='despatches_receipt_advice'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }

@@ -1,7 +1,7 @@
 //, enum:['ejs','json','xml','xslt','xls','xlsx','doc','docx','txt','pdf','html','js','sh','bat','cmd','jpg','jpeg','csv','sql','xsl','png']
 
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name: {type :String, trim:true, default:'' },
         extension: {type :String,  trim:true, default: ''},
         fileName: {type :String,  trim:true, default:''},
@@ -47,10 +47,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     
 
-    var collectionName='files'
-    var model=conn.model(collectionName, schema)
+    let collectionName='files'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     //model.relations={pos_devices:'localConnector'}
 

@@ -1,13 +1,13 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name:{type: String, trim:true, required:[true,'isim gereklidir']},
-        account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        salesAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        returnAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        exportSalesAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        salesDiscountAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        buyingDiscountAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
-        costOfGoodsSoldAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
+        account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        salesAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        returnAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        exportSalesAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        salesDiscountAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        buyingDiscountAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
+        costOfGoodsSoldAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel.accounts, default:null },
         createdDate: { type: Date,default: Date.now, index:true },
         modifiedDate:{ type: Date,default: Date.now, index:true }
     })
@@ -36,11 +36,11 @@ module.exports=function(conn){
     schema.index({
         "name":1
     },{unique:true})
-    var collectionName='account_groups'
-    var model=conn.model(collectionName, schema)
+    let collectionName='account_groups'
+    let model=dbModel.conn.model(collectionName, schema)
     
 
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     model.relations={items:'accountGroup'}
 

@@ -1,8 +1,8 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
-        item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
+        item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
         //qwerty renkler, desenler, bedenler, her varyasyon icin subQuantity dusunulebilir
-        sourceRecipe: {type: mongoose.Schema.Types.ObjectId, ref: 'recipes', default:null},
+        sourceRecipe: {type: mongoose.Schema.Types.ObjectId, ref: 'recipes', mdl:dbModel['recipes'], default:null},
         productionId:{type: String, trim:true, default: ''},
         productionTypeCode: { type: String,default: '', trim:true, enum:['MUSTERI','DEPO'] },
         issueDate: { type: String,  required: [true,'İş Emri tarihi gereklidir']},
@@ -30,7 +30,7 @@ module.exports=function(conn){
                 producedQuantity:dbType.quantityType,
                 deliveredQuantity:dbType.quantityType,
                 orderReference:{
-                    order:{type: mongoose.Schema.Types.ObjectId, ref: 'orders', default:null},
+                    order:{type: mongoose.Schema.Types.ObjectId, ref: 'orders', mdl:dbModel['orders'], default:null},
                     ID:dbType.idType,
                     issueDate:dbType.valueType,
                     orderTypeCode:dbType.valueType,
@@ -47,25 +47,25 @@ module.exports=function(conn){
         description:{ type: String, trim:true, default: ''},
         process:[{
             sequence:{ type: Number, default: 0},
-            station: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_stations'},
-            step: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_process_steps'},
+            station: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_stations', mdl:dbModel['mrp_stations']},
+            step: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_process_steps', mdl:dbModel['mrp_process_steps']},
             machines: [ {
-                machine:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machines', default:null},
-                mold:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_molds', default:null},
+                machine:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machines', mdl:dbModel['mrp_machines'], default:null},
+                mold:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_molds', mdl:dbModel['mrp_molds'], default:null},
                 cycle:dbType.measureType,
                 cavity:{ type: Number, default: 0},
                 quantityPerHour:{ type: Number, default: 0},
                 parameters:{type:Object,default:null}
             }],
             input: [{
-                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
                 //qwerty buraya renk desen beden gelecek
                 quantity:{ type: Number, default: 0},
                 unitCode:{type: String, trim:true, default: ''},
                 percent:{ type: Number, default: 0}
             }],
             output: [{  //yan urunler
-                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
                 //qwerty buraya renk desen beden gelecek
                 quantity:{ type: Number, default: 0},
                 unitCode:{type: String, trim:true, default: ''},
@@ -74,14 +74,14 @@ module.exports=function(conn){
             parameters:{type: String, trim:true, default: ''}
         }],
         materialSummary:[{
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
             //qwerty buraya renk desen beden gelecek
             quantity:{ type: Number, default: 0},
             unitCode:{type: String, trim:true, default: ''},
             percent:{ type: Number, default: 0}
         }],
         outputSummary:[{
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
             //qwerty buraya renk desen beden gelecek
             quantity:{ type: Number, default: 0},
             unitCode:{type: String, trim:true, default: ''},
@@ -94,14 +94,14 @@ module.exports=function(conn){
         totalWeight:{ type: Number, default: 0},
         finishNotes:{type: String, default: ''},
         packingOption:{
-            palletType:{type: mongoose.Schema.Types.ObjectId, ref: 'pallet_types',default:null},
-            packingType:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null},
+            palletType:{type: mongoose.Schema.Types.ObjectId, ref: 'pallet_types', mdl:dbModel['pallet_types'],default:null},
+            packingType:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null},
             quantityInPacking:{ type: Number, default: 0},
             palletRowCount:{ type: Number, default: 0},
             packingCountInRow:{ type: Number, default: 0},
             unitCode:{type: String, trim:true, default: ''},
-            packingType2:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null},
-            packingType3:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null}
+            packingType2:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null},
+            packingType3:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null}
         },
         totalPallet:{ type: Number, default: 0},
         totalPacking:{ type: Number, default: 0},
@@ -147,10 +147,10 @@ module.exports=function(conn){
     })
 
 
-    var collectionName='production_orders'
-    var model=conn.model(collectionName, schema)
+    let collectionName='production_orders'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     model.relations={inventory_fiches:'productionOrderId'}
     return model

@@ -1,7 +1,7 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
-        moldGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_mold_groups', required: [true,'Kalıp grubu gereklidir.']},
-        machineGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machine_groups', required: [true,'Makine grubu gereklidir.']},
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
+        moldGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_mold_groups', mdl:dbModel['mrp_mold_groups'], required: [true,'Kalıp grubu gereklidir.']},
+        machineGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machine_groups', mdl:dbModel['mrp_machine_groups'], required: [true,'Makine grubu gereklidir.']},
         name: {type: String, trim:true, required: true},
         description: {type: String, trim:true},
         moldParameters:[{
@@ -9,7 +9,7 @@ module.exports=function(conn){
             value:{type: String, trim:true, default:''}
         }],
         cavity:{ type: Number, default: 0},
-        account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', default:null },
+        account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel['accounts'], default:null },
         createdDate: { type: Date,default: Date.now},
         modifiedDate:{ type: Date,default: Date.now},
         passive: {type: Boolean, default: false}
@@ -36,10 +36,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
  
 
-    var collectionName='mrp_molds'
-    var model=conn.model(collectionName, schema)
+    let collectionName='mrp_molds'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     //model.relations={pos_devices:'location'}
     return model

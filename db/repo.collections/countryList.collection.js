@@ -1,5 +1,5 @@
 module.exports= function(conn){
-    var schema = mongoose.Schema({
+    let schema = mongoose.Schema({
         name: {type:String, default: ""},
         code: {type:String, default: ""}
         

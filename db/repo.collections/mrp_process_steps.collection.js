@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name: {type: String, trim:true, required: [true,'isim gereklidir'], unique:true},
         useMaterialInput: {type: Boolean, default: false},
         useMaterialOutput: {type: Boolean, default: false},
@@ -32,10 +32,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
  
 
-    var collectionName='mrp_process_steps'
-    var model=conn.model(collectionName, schema)
+    let collectionName='mrp_process_steps'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     //model.relations={mrp_machines:'station'}
     return model

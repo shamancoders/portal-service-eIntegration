@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name: {type: String, trim:true, required: [true,'isim/kod gereklidir.'] , unique:true},
         description: {type: String, trim:true, default:''},
         width: {type: Number, default: 0, index:true}, //birim mm/MMT
@@ -9,7 +9,7 @@ module.exports=function(conn){
         maxWeight:{type: Number, default: 0, index:true},//birim kg/KGM
         content:[{
             sequence:{type: Number, default: 0},
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', default:null},
+            item: {type: mongoose.Schema.Types.ObjectId},
             quantity: {type: Number, default: 0, index:true},
             unitCode:{type: String, trim:true, default: '', index:true},
             color:{type: Object, default:null, index:true},  //qwerty  colors tablosuna
@@ -42,10 +42,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
  
 
-    var collectionName='packing_types'
-    var model=conn.model(collectionName, schema)
+    let collectionName='packing_types'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     //model.relations={pallets:'palletType'}
     // model.relations={machines:'location'}

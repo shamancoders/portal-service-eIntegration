@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         type: {type: String, trim:true, required: [true,'Servis turu gereklidir'], default: 'ingenico', enum:['ingenico','beko','hugin','profilo','verifone','olivetti','veradelta']},
         name: {type: String,  trim:true, required: [true,'Servis adi gereklidir']},
         url: {type: String, trim:true, default: ''},
@@ -31,10 +31,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     
 
-    var collectionName='pos_device_services'
-    var model=conn.model(collectionName, schema)
+    let collectionName='pos_device_services'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     model.relations={pos_devices:'service'}
 

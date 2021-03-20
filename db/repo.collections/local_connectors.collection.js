@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name: {type: String, required: [true,'Isim gereklidir.']},
         connectorType: {type: String, enum:['','e-invoice','e-ledger','zreport']},
         connectorId: {type: String, required: [true,'Connector ID gereklidir.']},
@@ -13,8 +13,8 @@ module.exports=function(conn){
             password: {type :String, default: ''},
             file: {type :String, default: ''}
         },
-        startFile:{type: mongoose.Schema.Types.ObjectId, ref: 'files'},
-        files:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+        startFile:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']},
+        files:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
         createdDate: { type: Date,default: Date.now},
         modifiedDate:{ type: Date,default: Date.now},
         passive: {type: Boolean, default: false}
@@ -41,10 +41,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     
 
-    var collectionName='local_connectors'
-    var model=conn.model(collectionName, schema)
+    let collectionName='local_connectors'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     model.relations={pos_devices:'localConnector'}
 

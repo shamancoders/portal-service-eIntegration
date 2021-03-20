@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         name: {type: String, trim:true, required: true},
         description: {type: String, trim:true},
         level:{type: Number, default:0},
@@ -29,10 +29,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
  
 
-    var collectionName='production_break_reasons'
-    var model=conn.model(collectionName, schema)
+    let collectionName='production_break_reasons'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     // model.removeMany=(member, filter,cb)=>{ sendToTrashMany(conn,collectionName,member,filter,cb) }
     //model.relations={pos_devices:'location'}
     return model

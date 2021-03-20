@@ -1,7 +1,7 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         ioType :{ type: Number,default: 0}, // 0 - cikis , 1- giris
-        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: false},
+        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', mdl:dbModel['integrators'], required: false},
         profileId: { 
             value: { type: String,default: '', trim:true, enum:['TEMELSIPARIS'], required: true}
         },
@@ -162,10 +162,10 @@ module.exports=function(conn){
     })
 
 
-    var collectionName='orders'
-    var model=conn.model(collectionName, schema)
+    let collectionName='orders'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }

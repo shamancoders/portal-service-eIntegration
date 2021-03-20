@@ -20,17 +20,7 @@ module.exports=(app)=>{
 	})
 
 	app.use((err,req, res, next)=>{
-		// var error={code:'403',message:''}
-		// if(typeof err=='string'){
-		// 	error.message=err
-		// }else{
-		// 	error.code=err.code || err.name || 'ERROR'
-		// 	if(err.message)
-		// 		error.message=err.message
-		// 	else
-		// 		error.message=err.name || ''
-		// }
-		// res.status(403).json({ success:false, error:error})
+
 		sendError(err,res)
 	})
 }
@@ -66,34 +56,42 @@ function clientControllers(app){
 				case 'edespatch':
 				case 'despatch':
 				case 'e-despatch':
-					serviceName='eDespatch'
+				serviceName='eDespatch'
 				break
 				case 'einvoice':
 				case 'invoice':
 				case 'e-invoice':
-					serviceName='eInvoice'
+				serviceName='eInvoice'
 				break
 				default:
-					throw {code:'Error',message:`'${req.params.service} service was not found`}
-					return
+				throw {code:'Error',message:`'${req.params.service} service was not found`}
+				return
 				break
 			}
 			var ctl=getController(serviceName,req.params.func)
-			ctl(repoDb[req.params.dbId], req, res, next, (data)=>{
-				if(data==undefined)
-					res.json({success:true})
-				else if(data==null)
-                    res.json({success:true})
-                 else if(data.file!=undefined)
-                    downloadFile(data.file,req,res,next)
-                else if(data.fileId!=undefined)
-                    downloadFileId(repoDb[req.params.dbId],data.fileId,req,res,next)
-                else if(data.sendFile!=undefined)
-                    sendFile(data.sendFile,req,res,next)
-                else if(data.sendFileId!=undefined)
-                    sendFileId(repoDb[req.params.dbId],data.sendFileId,req,res,next)
-                else{
-					res.status(200).json({ success:true, data: data })
+			repoDbModel(req.params.dbId,(err,dbModel)=>{
+				if(!err){
+					ctl(dbModel, req, res, next, (data)=>{
+						if(data==undefined)
+							res.json({success:true})
+						else if(data==null)
+							res.json({success:true})
+						else if(data.file!=undefined)
+							downloadFile(data.file,req,res,next)
+						else if(data.fileId!=undefined)
+							downloadFileId(dbModel,data.fileId,req,res,next)
+						else if(data.sendFile!=undefined)
+							sendFile(data.sendFile,req,res,next)
+						else if(data.sendFileId!=undefined)
+							sendFileId(dbModel,data.sendFileId,req,res,next)
+						else{
+							res.status(200).json({ success:true, data: data })
+						}
+						dbModel.free()
+						delete dbModel
+					})
+				}else{
+					next(err)
 				}
 			})
 		})

@@ -41,7 +41,6 @@ module.exports=()=>{
 				eDespatch.start()
 				// eInvoice.start()
 				
-				refreshRepoDb()
 			}else{
 				errorLog(err)
 			}

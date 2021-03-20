@@ -1,5 +1,5 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
 		name:{ type: String, trim:true,required: [true,'Isim gereklidir'], default: ''},
 		times:[{
 			name:{ type: String, trim:true, default: ''},
@@ -37,10 +37,10 @@ module.exports=function(conn){
 	schema.plugin(mongooseAggregatePaginate)
 	
 
-	var collectionName='shifts'
-	var model=conn.model(collectionName, schema)
+	let collectionName='shifts'
+	let model=dbModel.conn.model(collectionName, schema)
 	
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 	
 	return model
 }

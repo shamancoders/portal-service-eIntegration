@@ -139,28 +139,22 @@ global.epValidateSync=(doc,cb)=>{
 global.db={
 	dbName:'@MasterDb',
 	get nameLog(){
-		return dbNameLog(this)
+		return dbNameLog(this.dbName) 
 	}
 }
-global.wooDb={
-	dbName:'@WooDb',
+global.workerDb={
+	dbName:'@workerDb',
 	get nameLog(){
-		return dbNameLog(this)
+		return dbNameLog(this.dbName)
 	}
 }
 
 
 module.exports=(cb)=>{
-	baglan('master.collections',config.mongodb.address,db,(err)=>{
+	baglan('master.collections',config.mongodb.master,db,(err)=>{
 		if(!err){
-			baglan('woo.collections',config.mongodb.wooIntegrationDb,wooDb,(err)=>{
-				if(!err){
-					cb(null)
-				}else{
-					cb(err)
-				}
-			})
-			
+			initRepoDb()
+			baglan('worker.collections',config.mongodb.worker,workerDb,(err)=>cb(err))
 		}else{
 			cb(err)
 		}
@@ -173,21 +167,17 @@ function baglan(collectionFolder, mongoAddress, dbObj, cb){
 			if(!err){
 				dbObj.conn = mongoose.createConnection(mongoAddress,{ useNewUrlParser: true ,useUnifiedTopology:true, autoIndex: true  })
 				dbObj.conn.on('connected', ()=>{
+					Object.keys(holder).forEach((key)=>{
+						dbObj[key]=holder[key](dbObj.conn)
+					})
 					if(dbObj.conn.active!=undefined){
 						eventLog(`${dbObj.nameLog} ${'re-connected'.green}`)
 					}else{
 						eventLog(`${dbObj.nameLog} ${'connected'.brightGreen}`)
 					}
 					dbObj.conn.active=true
-					
-					Object.keys(holder).forEach((e)=>{
-						if(!dbObj[e]){
-							dbObj[e]=holder[e](dbObj.conn)
-						}
-					})
-
 					if(cb)
-						cb(null)
+						cb(null,dbObj)
 				})
 
 				dbObj.conn.on('error', (err)=>{
@@ -209,99 +199,98 @@ function baglan(collectionFolder, mongoAddress, dbObj, cb){
 				if(cb)
 					cb(err)
 			}
-
 		})
 	}else{
 		if(cb)
-			cb()
+			cb(null,dbObj)
 	}
 }
 
 
+global.repoHolder={}
 
-function userDbCheckItSelf(cb){
-	var target=this
-	db.dbdefines.findOne({_id:this._id},(err,doc)=>{
-		if(dberr(err,cb)){
-			target=Object.assign({}, target, doc.toJSON())
-			if(this.userDb!=doc.userDb || this.userDbHost!=doc.userDbHost){
-				this.conn=undefined
-				delete this.conn
+var serverConn1,serverConn2,serverConn3
 
-				baglan('repo.collections',`${doc.userDbHost}${doc.userDb}`, this, (err)=>{
-					if(dberr(err,cb)){
-						if(cb)
-							cb(null)
-					}
+function initRepoDb(){
+	moduleLoader(path.join(__dirname, 'repo.collections'),'.collection.js',``,(err,holder)=>{
+		repoHolder=holder
+
+		if(!err){
+			if(config.mongodb.server1){
+				serverConn1 = mongoose.createConnection(config.mongodb.server1,{ useNewUrlParser: true ,useUnifiedTopology:true, autoIndex: true  })
+				serverConn1.on('connected', ()=>{
+					eventLog(`${config.mongodb.server1.brightBlue} ${'connected'.brightGreen}`)
 				})
-			}else{
-				if(cb)
-					cb(null)
+
+				serverConn1.on('error', (err)=>errorLog(`${config.mongodb.server1.brightBlue} Error:`,err)) 
+				serverConn1.on('disconnected', ()=>eventLog(`${config.mongodb.server1.brightBlue} disconnected`))
+			}
+			if(config.mongodb.server2){
+				serverConn2 = mongoose.createConnection(config.mongodb.server2,{ useNewUrlParser: true ,useUnifiedTopology:true, autoIndex: true  })
+				serverConn2.on('connected', ()=>{
+					eventLog(`${config.mongodb.server2.brightBlue} ${'connected'.brightGreen}`)
+				})
+
+				serverConn2.on('error', (err)=>errorLog(`${config.mongodb.server2.brightBlue} Error:`,err)) 
+				serverConn2.on('disconnected', ()=>eventLog(`${config.mongodb.server2.brightBlue} disconnected`))
+			}
+			
+		}else{
+			errorLog('refreshRepoDb:',err)
+		}
+	})
+}
+
+global.repoDbModel=function(_id,cb){
+	db.dbdefines.findOne({_id:_id,deleted:false,passive:false},(err,doc)=>{
+		if(dberr(err,cb)){
+			if(dbnull(doc,cb)){
+				var dbModel={	get nameLog(){return dbNameLog(doc.dbName)} }
+				dbModel._id=doc._id
+				dbModel.dbName=doc.dbName
+				dbModel.enabledServices=doc.services
+				dbModel.authorizedMembers=doc.authorizedMembers
+				switch(doc.userDbHost){
+					case config.mongodb.server1:
+					dbModel.conn=serverConn1.useDb(doc.userDb)
+					break
+					case config.mongodb.server2:
+					dbModel.conn=serverConn2.useDb(doc.userDb)
+					break
+					case config.mongodb.server3:
+					dbModel.conn=serverConn3.useDb(doc.userDb)
+					break
+				}
+				
+				dbModel.free=function(){
+					Object.keys(dbModel.conn.models).forEach((key)=>{
+						delete dbModel.conn.models[key]
+						delete dbModel.conn.collections[key]
+						delete dbModel.conn.base.modelSchemas[key]
+					})
+				}
+
+				Object.keys(repoHolder).forEach((key)=>{
+					Object.defineProperty(dbModel,key,{
+						get:function(){
+							if(dbModel.conn.models[key]){
+								return dbModel.conn.models[key]
+							}else{
+								return repoHolder[key](dbModel)
+							}
+						}
+					})
+				})
+				cb(null,dbModel)
 			}
 		}
 	})
 }
 
-global.repoDb={}
 
-global.refreshRepoDb=()=>{
-	var filter={}
-	db.dbdefines.find(filter,(err,docs)=>{
-		if(dberr(err)){
-			docs.forEach((doc)=>{
-				doc=doc.toJSON()
-				if(repoDb[doc._id]==undefined && !doc.deleted && !doc.passive){
-					repoDb[doc._id]={
-						get nameLog(){
-							return dbNameLog(doc)
-						},
-						isBusy:true
-					}
-					
-					Object.keys(doc).forEach((key)=>{
-						repoDb[doc._id][key]=doc[key]
-					})
-					repoDb[doc._id].check=userDbCheckItSelf
-					baglan('repo.collections',`${doc.userDbHost}${doc.userDb}`, repoDb[doc._id], (err)=>{
-						repoDb[doc._id].isBusy=false
-					})
-				}else if(repoDb[doc._id]!=undefined &&  (doc.deleted || doc.passive)){
-					if(repoDb[doc._id].conn){
-						repoDb[doc._id].conn.close()
-					}
-					repoDb[doc._id]=undefined
-					delete repoDb[doc._id]
-					
-				}else{
-					if(repoDb[doc._id]!=undefined){
-						if(repoDb[doc._id].isBusy)
-							return
-						repoDb[doc._id].isBusy=true
-						Object.keys(doc).forEach((key)=>{
-							repoDb[doc._id][key]=doc[key]
-						})
-						repoDb[doc._id].isBusy=false
-					}
-				}
-			})
-		}
-	})
-
-	setTimeout(refreshRepoDb,2000)
-
-}
-
-var moduleLoaderCache={}
 function moduleLoader(folder,suffix,expression,cb){
 	try{
-
 		var moduleHolder={}
-
-		if(moduleLoaderCache[folder]!=undefined){
-			// moduleHolder=clone(moduleLoaderCache[folder])
-			// return cb(null,moduleHolder)
-			return cb(null,moduleLoaderCache[folder])
-		}
 		var files=fs.readdirSync(folder)
 		files.forEach((e)=>{
 			let f = path.join(folder, e)
@@ -313,10 +302,6 @@ function moduleLoader(folder,suffix,expression,cb){
 				}
 			}
 		})
-
-		moduleLoaderCache[folder]=moduleHolder
-
-		
 		cb(null,moduleHolder)
 	}catch(e){
 		errorLog(`moduleLoader Error:\r\n\tfolder:${folder}\r\n\tsuffix:${suffix}\r\n\texpression:${expression}`,e)
@@ -325,67 +310,64 @@ function moduleLoader(folder,suffix,expression,cb){
 }
 
 
+function dbNameLog(s){
+	return s.padding(20).brightBlue
+}
+
+
+var calisanServiceDatabaseler={}
 global.runServiceOnAllUserDb=(options)=>{
 	try{
 		options.repeatInterval=options.repeatInterval || 60000
-		if(repoDb==undefined){
-			setTimeout(()=>{ runServiceOnAllUserDb(options) },options.repeatInterval)
-			return
+
+		var serviceName=options.name || app.get('name')
+		var filter ={deleted:false,passive:false}
+		filter=Object.assign({},filter,(options.filter || {}))
+
+		if(!calisanServiceDatabaseler[serviceName]){
+			calisanServiceDatabaseler[serviceName]={}
 		}
 
-		Object.keys(repoDb).forEach((_id)=>{
-			var dbModel=repoDb[_id]
-			if(dbModel.conn==undefined)
-				return
-			if(!dbModel.conn.active)
-				return
-
-			var serviceName=options.name || app.get('name')
-			dbModel.isWorking=dbModel.isWorking || {}
-
-			if((options.filter?options.filter(dbModel):true)){
-				if(!dbModel.isWorking[serviceName]){
-					
-
-					if(dbModel.isWorking[`${serviceName}_endTime`]!=undefined){
-						// ** son bitisin uzerinden repeatInterval kadar gecmediyse calistirma, sonraki refreshte calissin
-						var sonBitis=dbModel.isWorking[`${serviceName}_endTime`]
-						var fark=(new Date()).getTime()-sonBitis
-						if(fark<options.repeatInterval){
-							return
+		function calistir(){
+			db.dbdefines.find(filter).select('_id').exec((err,docs)=>{
+				if(!err){
+					eventLog(`${serviceName.yellow} ${docs.length.toString().brightBlue} adet veri ambari uzerinde calisiyor`)
+					docs.forEach((doc)=>{
+						if(!calisanServiceDatabaseler[serviceName][doc._id]){
+							calisanServiceDatabaseler[serviceName][doc._id]={	working:true}
+							repoDbModel(doc._id,(err,dbModel)=>{
+								if(!err){
+									dbModel.t=(new Date()).getTime()
+									options.serviceFunc(dbModel,(err)=>{
+										var fark=(((new Date()).getTime())-dbModel.t)/1000
+										if(!err){
+											eventLog(`${dbModel.dbName.padding(20).brightBlue} ${serviceName.yellow} finished in ${fark.toString().yellow} sn`)
+										}else{
+											errorLog(`${dbModel.dbName.padding(20).brightBlue} ${serviceName.yellow} ${fark.toString().yellow} sn Error:`,err)
+										}
+										dbModel.free()
+										delete dbModel
+										delete calisanServiceDatabaseler[serviceName][doc._id]
+									})
+								}else{
+									errorLog(`${serviceName.yellow} error:`,err)
+									delete calisanServiceDatabaseler[serviceName][doc._id]
+								}
+							})
 						}
-					}
-
-					dbModel.isWorking[serviceName]=true
-					dbModel.isWorking[`${serviceName}_t`]=(new Date()).getTime()
-					eventLog(`${dbModel.dbName.padding(20).brightBlue} ${serviceName.yellow} started`)
-
-					options.serviceFunc(dbModel,(err)=>{
-						var fark=(((new Date()).getTime())-dbModel.isWorking[`${serviceName}_t`])/1000
-						dbModel.isWorking[serviceName]=false
-						if(!err){
-							eventLog(`${dbModel.dbName.padding(20).brightBlue} ${serviceName.yellow} finished in ${fark.toString().yellow} sn`)
-						}else{
-							errorLog(`${dbModel.dbName.padding(20).brightBlue} ${serviceName.yellow} ${fark.toString().yellow} sn Error:`,err)
-						}
-						dbModel.isWorking[`${serviceName}_endTime`]=(new Date()).getTime()
 					})
-				}
-			}
-		})
-		setTimeout(()=>{ runServiceOnAllUserDb(options) },options.repeatInterval)
-	}catch(tryErr){
-		console.error(tryErr)
-		setTimeout(()=>{ runServiceOnAllUserDb(options) },options.repeatInterval)
-	}
-}
 
-function dbNameLog(target){
-	var s=''
-	
-	if(target.dbName!=undefined){
-		s=target.dbName
+					setTimeout(calistir,options.repeatInterval)
+				}else{
+					errorLog(`${serviceName.yellow} error:`,err)
+					setTimeout(calistir,options.repeatInterval)
+				}
+			})
+		}
+
+		setTimeout(calistir,options.repeatInterval)
+	}catch(tryErr){
+		errorLog(`try catch error:`,tryErr)
+		setTimeout(()=>{ runServiceOnAllUserDb(options) },options.repeatInterval)
 	}
-	s=s.padding(20).brightBlue
-	return s
 }

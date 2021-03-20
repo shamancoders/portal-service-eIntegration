@@ -1,21 +1,21 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
 		type:{type: String, default:'', enum:['global','user'],index:true},
-		memberId: {type: mongoose.Schema.Types.ObjectId, ref: 'members', default: null,index:true},
+		memberId: {type: mongoose.Schema.Types.ObjectId, default: null,index:true},
 		module:{type: String, default:'',index:true},
 		name:{type: String, default:'',index:true},
 		createdDate: { type: Date,default: Date.now, index:true },
 		modifiedDate:{ type: Date,default: Date.now, index:true },
 		programButtons:[{
-			program:{type: mongoose.Schema.Types.ObjectId, ref: 'programs'},
+			program:{type: mongoose.Schema.Types.ObjectId, ref: 'programs', mdl:dbModel['programs']},
 			text: {type: String, default: ''},
 			icon: {type :String, default:''},		
 			class: {type :String, default:''},
 			passive:{ type: Boolean, default:false }
 		}],
 		print:{
-			form:{type: mongoose.Schema.Types.ObjectId, ref: 'print_designs', default: null},
-			list:{type: mongoose.Schema.Types.ObjectId, ref: 'print_designs', default: null}
+			form:{type: mongoose.Schema.Types.ObjectId, ref: 'print_designs', mdl:dbModel['print_designs'], default: null},
+			list:{type: mongoose.Schema.Types.ObjectId, ref: 'print_designs', mdl:dbModel['print_designs'], default: null}
 		},
 		autoSave:{ type: Boolean, default:false }
 	})
@@ -41,10 +41,10 @@ module.exports=function(conn){
 	schema.plugin(mongooseAggregatePaginate)
 	
 
-	var collectionName='settings'
-	var model=conn.model(collectionName, schema)
+	let collectionName='settings'
+	let model=dbModel.conn.model(collectionName, schema)
 	
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 	
 	return model
 }

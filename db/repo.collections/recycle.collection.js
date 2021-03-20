@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         collectionName: {type: String, default: ''},
         documentId: {type: mongoose.Schema.Types.ObjectId, default: null},
         document: {type: Object, default: null},

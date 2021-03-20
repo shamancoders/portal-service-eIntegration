@@ -1,6 +1,6 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
-        posDevice: {type: mongoose.Schema.Types.ObjectId, ref: 'pos_devices', required: true,index:true},
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
+        posDevice: {type: mongoose.Schema.Types.ObjectId, ref: 'pos_devices', mdl:dbModel['pos_devices'], required: true,index:true},
         zNo: { type: Number,default: 0,index:true},
         zDate: { type: Date,default: null,index:true},
         zTotal: { type: Number,default: 0},
@@ -42,10 +42,10 @@ module.exports=function(conn){
     //     "posDevice":1
     // })
     
-    var collectionName='pos_device_zreports'
-    var model=conn.model(collectionName, schema)
+    let collectionName='pos_device_zreports'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }

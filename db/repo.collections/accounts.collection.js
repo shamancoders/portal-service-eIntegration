@@ -1,6 +1,7 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
-		parentAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts' },
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
+		// parentAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel['accounts'] },
+		parentAccount: {type: mongoose.Schema.Types.ObjectId},
 		accountCode: {type: String, trim:true, index:true  },
 		code: {type: String, trim:true, required: true, index:true },
 		name: {type: String, trim:true, required: true, index:true },
@@ -67,11 +68,11 @@ module.exports=function(conn){
 	schema.index({
 		"accountCode":1
 	},{unique:true})
-	var collectionName='accounts'
-	var model=conn.model(collectionName, schema)
+	let collectionName='accounts'
+	let model=dbModel.conn.model(collectionName, schema)
 
 
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 	model.relations={accounts:'parentAccount', parties:'account'}
 
 	return model

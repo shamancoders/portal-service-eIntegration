@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         taskType: {type: String, required: true, enum:['connector_transfer_zreport','send_email','send_sms',
         'connector_import_einvoice','connector_export_einvoice','connector_import_eledger','einvoice_send_to_gib',
         'einvoice_approve','einvoice_decline','edespatch_send_to_gib','edespatch_send_receipt_advice']},
@@ -40,10 +40,10 @@ module.exports=function(conn){
         "status":1
     })
 
-    var collectionName='tasks'
-    var model=conn.model(collectionName, schema)
+    let collectionName='tasks'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     //model.relations={pos_device_zreports:'posDevice'}
 

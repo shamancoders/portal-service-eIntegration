@@ -1,8 +1,7 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
 		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','Both','Agency'],index:true},
 		mainParty: {type: mongoose.Schema.Types.ObjectId, 
-			ref: 'parties',
 			validate: {
 				validator: function(v) {
 					if((this.partyType=='Ageny') && ( (v || '') == '')){
@@ -15,7 +14,8 @@ module.exports=function(conn){
 			},
 			default:null
 		},
-		account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts',default:null},
+		account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel['accounts'],default:null},
+		// account: {type: mongoose.Schema.Types.ObjectId, default:null},
 		websiteURI:dbType.valueType,
 		partyIdentification:[dbType.partyIdentificationType],
 		partyName:{
@@ -72,10 +72,10 @@ module.exports=function(conn){
 		"tags":1
 	})
 
-	var collectionName='parties'
-	var model=conn.model(collectionName, schema)
+	let collectionName='parties'
+	let model=dbModel.conn.model(collectionName, schema)
 	
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 	
 	return model
 }

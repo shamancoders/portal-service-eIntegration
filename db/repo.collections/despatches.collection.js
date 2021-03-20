@@ -1,13 +1,13 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         ioType :{ type: Number,default: 0, index:true}, // 0 - cikis , 1- giris
-        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: true,index:true},
-        // location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', required: [true, 'Lokasyon gereklidir']},
-        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations'},
-        subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations'},
-        // location2: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', required: [true, 'Lokasyon 2 gereklidir']},
-        location2: {type: mongoose.Schema.Types.ObjectId, ref: 'locations'},
-        subLocation2: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations'},
+        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', mdl:dbModel['integrators'],  required: true,index:true},
+        // location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations'], required: [true, 'Lokasyon gereklidir']},
+        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations']},
+        // subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', mdl:dbModel['sub_locations']},
+        // location2: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations'], required: [true, 'Lokasyon 2 gereklidir']},
+        location2: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations']},
+        // subLocation2: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', mdl:dbModel['sub_locations']},
         profileId: { 
             value: { type: String,default: '', trim:true, enum:['TEMELIRSALIYE'], required: true}
         },
@@ -44,7 +44,7 @@ module.exports=function(conn){
         shipment:dbType.shipmentType,
         lineCountNumeric:dbType.numberValueType,
         despatchLine:[], // dbType.despatchLineType
-        receiptAdvice: {type: mongoose.Schema.Types.ObjectId, ref: 'despatches_receipt_advice'},
+        receiptAdvice: {type: mongoose.Schema.Types.ObjectId, ref: 'despatches_receipt_advice', mdl:dbModel['despatches_receipt_advice']},
         localDocumentId: {type: String, default: ''},
         
         despatchStatus: {type: String, default: 'Draft',enum:['Deleted','Pending','Draft','Canceled','Queued', 'Processing','SentToGib','Approved','PartialApproved','Declined','WaitingForApprovement','Error']},
@@ -62,7 +62,7 @@ module.exports=function(conn){
             this.lineCountNumeric.value=this.despatchLine.length
         }
         
-        updateActions(conn,this,next)
+        updateActions(dbModel,this,next)
        
         //next()
         //bir seyler ters giderse 
@@ -101,22 +101,24 @@ module.exports=function(conn){
         "createdDate":1
     })
 
-    var collectionName='despatches'
-    var model=conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    let collectionName='despatches'
+    let model=dbModel.conn.model(collectionName, schema)
+    
+    
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }
 
 
-function updateActions(conn,doc,next){
+function updateActions(dbModel,doc,next){
     
-    var index=0
+    let index=0
     function kaydet(cb){
         if(index>=doc.despatchLine.length) return cb(null)
         if(doc.despatchLine[index].item._id){
-            var newActionDoc=conn.model('actions')(dbType.actionType)
+            let newActionDoc=new dbModel.actions(dbType.actionType)
             newActionDoc.actionType='despatch'
             newActionDoc.ioType=doc.ioType
             newActionDoc.actionCode=doc.despatchAdviceTypeCode.value
@@ -147,7 +149,7 @@ function updateActions(conn,doc,next){
         
     }
     
-    conn.model('actions').deleteMany({docId:doc._id},(err,docs)=>{
+    dbModel.actions.deleteMany({docId:doc._id},(err,docs)=>{
         if(err){
             
             errorLog(err)

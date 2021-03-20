@@ -1,9 +1,9 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         ioType :{ type: Number,default: 0}, // 0 - cikis , 1- giris
-        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', required: true},
-        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', default:null},
-        subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', default:null},
+        eIntegrator: {type: mongoose.Schema.Types.ObjectId, ref: 'integrators', mdl:dbModel['integrators'], required: true},
+        location: {type: mongoose.Schema.Types.ObjectId, ref: 'locations', mdl:dbModel['locations'], default:null},
+        // subLocation: {type: mongoose.Schema.Types.ObjectId, ref: 'sub_locations', mdl:dbModel['sub_locations'], default:null},
         profileId: { 
             value: { type: String,default: '', trim:true, enum:['TEMELFATURA','TICARIFATURA','IHRACAT','YOLCUBERABERFATURA','EARSIVFATURA'], required: true}
         },
@@ -89,8 +89,8 @@ module.exports=function(conn){
             payableAmount :dbType.amountType
         },
         invoiceLine:[dbType.invoiceLineType],
-        pdf:{type: mongoose.Schema.Types.ObjectId, ref: 'files' , default:null},
-        html:{type: mongoose.Schema.Types.ObjectId, ref: 'files' , default:null},
+        pdf:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files'] , default:null},
+        html:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files'] , default:null},
         localDocumentId: {type: String, default: ''},
         invoiceStatus: {type: String, default: 'Draft',enum:['Draft','Pending','Queued', 'Processing','SentToGib','Approved','Declined','WaitingForApprovement','Error']},
         invoiceErrors:[{_date:{ type: Date,default: Date.now}, code:'',message:''}],
@@ -146,10 +146,10 @@ module.exports=function(conn){
     })
 
 
-    var collectionName='invoices'
-    var model=conn.model(collectionName, schema)
+    let collectionName='invoices'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }

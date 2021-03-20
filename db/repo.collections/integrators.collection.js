@@ -1,5 +1,5 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
         eIntegrator: {type: String, trim:true, required: [true,'Entegrator seciniz'], default: 'uyumsoft', enum:['uyumsoft','finansbank','innova','logo','turkcell','ingbank'],index:true},
         name: {type: String,  trim:true, required: [true,'Kisa bir isim (Sube vs) gereklidir']},
         invoice:{
@@ -11,16 +11,16 @@ module.exports=function(conn){
             prefixInbox: {type: String, trim:true, default: 'AFT'},
             postboxAlias: {type: String, trim:true, default: ''},
             senderboxAlias: {type: String, trim:true, default: ''},
-            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files'},
-            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']},
+            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
             localConnector:{
                 import:{ //sqlserver to tr216
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
                 export:{ //tr216 to sqlserver
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
@@ -37,16 +37,16 @@ module.exports=function(conn){
             prefixReceiptAdviceInbox: {type: String, trim:true, default: 'TES',minlength:[3,'Ön ekler 3 Karakter olmalıdır'],maxlength:[3,'Ön ekler 3 Karakter olmalıdır'],required: [true,'Irsaliye Teslim Yanit Numarasi icin 3 Karakter Ön Ek gereklidir']},
             postboxAlias: {type: String, trim:true, default: ''},
             senderboxAlias: {type: String, trim:true, default: ''},
-            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files'},
-            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']},
+            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
             localConnector:{
                 import:{ //sqlserver to tr216
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
                 export:{ //tr216 to sqlserver
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
@@ -62,16 +62,16 @@ module.exports=function(conn){
             prefixInbox: {type: String, trim:true, default: 'ASP',minlength:[3,'Ön ekler 3 Karakter olmalıdır'],maxlength:[3,'Ön ekler 3 Karakter olmalıdır'],required: [true,'3 Karakter Alim Siparis Ön Ek gereklidir']},
             postboxAlias: {type: String, trim:true, default: ''},
             senderboxAlias: {type: String, trim:true, default: ''},
-            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files'},
-            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']},
+            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
             localConnector:{
                 import:{ //sqlserver to tr216
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
                 export:{ //tr216 to sqlserver
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
@@ -86,16 +86,16 @@ module.exports=function(conn){
             prefixInbox: {type: String, trim:true, default: 'GBE',minlength:[3,'Ön ekler 3 Karakter olmalıdır'],maxlength:[3,'Ön ekler 3 Karakter olmalıdır'],required: [true,'3 Karakter gelen dokuman Ön Ek gereklidir']},
             postboxAlias: {type: String, trim:true, default: ''},
             senderboxAlias: {type: String, trim:true, default: ''},
-            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files'},
-            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+            xslt:{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']},
+            xsltFiles:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
             localConnector:{
                 import:{ //sqlserver to tr216
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
                 export:{ //tr216 to sqlserver
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
@@ -108,12 +108,12 @@ module.exports=function(conn){
             password: {type: String, default: ''},
             localConnector:{
                 import:{ //sqlserver to tr216
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
                 export:{ //tr216 to sqlserver
-                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors' , default:null}, 
+                    localConnector:{type: mongoose.Schema.Types.ObjectId, ref: 'local_connectors', mdl:dbModel['local_connectors'] , default:null}, 
                     status: {type: String, trim:true, default: ''},
                     error:{code:'',message:''}
                 },
@@ -147,10 +147,10 @@ module.exports=function(conn){
     schema.plugin(mongoosePaginate)
     
 
-    var collectionName='integrators'
-    var model=conn.model(collectionName, schema)
+    let collectionName='integrators'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     // model.relations={pos_device_zreports:'posDevice'}
 

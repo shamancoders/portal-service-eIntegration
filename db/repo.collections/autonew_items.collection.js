@@ -1,6 +1,6 @@
-module.exports=function(conn){
-	var schema = mongoose.Schema({
-		itemId: {type: mongoose.Schema.Types.ObjectId, ref: 'items', default:null},
+module.exports=function(dbModel){
+	let schema = mongoose.Schema({
+		itemId: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items'], default:null},
 		generated: {type: Boolean, default: false},
 		cancelled: {type: Boolean, default: false},
 		itemType: {type: String, trim:true, index:true, required: [true,'itemType gereklidir'], default: 'item', enum:['item','raw-material','helper-material','product','semi-product','sales-service','purchasing-service','asset','expense']},
@@ -22,8 +22,9 @@ module.exports=function(conn){
 		itemInstance:[dbType.itemInstanceType],
 		taxTotal:[dbType.taxTotalType],
 		withholdingTaxTotal:[dbType.taxTotalType],
-		accountGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'account_groups', default:null},
-		similar:[{type: mongoose.Schema.Types.ObjectId, ref: 'items'}],
+		accountGroup: {type: mongoose.Schema.Types.ObjectId, ref: 'account_groups', mdl:dbModel['account_groups'], default:null},
+		// similar:[{type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']}],
+		similar:[{type: mongoose.Schema.Types.ObjectId}],
 		unitPacks:[{
 			unitCode:{type: String, trim:true, default: ''},
 			netWeight:dbType.quantityType,
@@ -32,7 +33,7 @@ module.exports=function(conn){
 		}],
 		vendors:[{
 			sequenceNumeric:dbType.numberValueType,
-			vendor:{type: mongoose.Schema.Types.ObjectId, ref: 'parties'},
+			vendor:{type: mongoose.Schema.Types.ObjectId, ref: 'parties', mdl:dbModel['parties']},
 			supplyDuration:dbType.numberValueType
 		}],
 		tracking:{
@@ -44,20 +45,20 @@ module.exports=function(conn){
 		},
 		supplyDuration:dbType.numberValueType,
 		tags:{type: String, trim:true, default: ''},
-		images:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
-		files:[{type: mongoose.Schema.Types.ObjectId, ref: 'files'}],
+		images:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
+		files:[{type: mongoose.Schema.Types.ObjectId, ref: 'files', mdl:dbModel['files']}],
 		exceptInventory: {type: Boolean, default: false},
 		exceptRecipeCalculation: {type: Boolean, default: false},
-		recipe: {type: mongoose.Schema.Types.ObjectId, ref: 'recipes'},
+		recipe: {type: mongoose.Schema.Types.ObjectId, default:null},
 		packingOptions:[{
-			palletType:{type: mongoose.Schema.Types.ObjectId, ref: 'pallet_types',default:null},
-			packingType:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null},
+			palletType:{type: mongoose.Schema.Types.ObjectId, ref: 'pallet_types', mdl:dbModel['pallet_types'],default:null},
+			packingType:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null},
 			quantityInPacking:{ type: Number, default: 0},
 			palletRowCount:{ type: Number, default: 0},
 			packingCountInRow:{ type: Number, default: 0},
 			unitCode:{type: String, trim:true, default: ''},
-			packingType2:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null},
-			packingType3:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types',default:null}
+			packingType2:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null},
+			packingType3:{type: mongoose.Schema.Types.ObjectId, ref: 'packing_types', mdl:dbModel['packing_types'],default:null}
 		}],
 		localDocumentId: {type: String, default: ''},
 		createdDate: { type: Date,default: Date.now},
@@ -94,10 +95,10 @@ module.exports=function(conn){
 
 
 
-	var collectionName='autonew_items'
-	var model=conn.model(collectionName, schema)
+	let collectionName='autonew_items'
+	let model=dbModel.conn.model(collectionName, schema)
 
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 
 	return model
 }

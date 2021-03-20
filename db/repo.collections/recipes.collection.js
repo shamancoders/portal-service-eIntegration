@@ -1,30 +1,30 @@
-module.exports=function(conn){
-    var schema = mongoose.Schema({
-        item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+module.exports=function(dbModel){
+    let schema = mongoose.Schema({
+        item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
         name:{type: String, default: ''},
         description:{type: String, trim:true, default: ''},
         revision:{ type: Number, default: 1},
         mrpVersion:{ type: Number, default: 1},
         process:[{
             sequence:{ type: Number, default: 0},
-            station: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_stations'},
-            step: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_process_steps'},
+            station: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_stations', mdl:dbModel['mrp_stations']},
+            step: {type: mongoose.Schema.Types.ObjectId, ref: 'mrp_process_steps', mdl:dbModel['mrp_process_steps']},
             machines: [{
-                machineGroup:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machine_groups', default:null},
-                mold:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_molds', default:null},
+                machineGroup:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_machine_groups', mdl:dbModel['mrp_machine_groups'], default:null},
+                mold:{type: mongoose.Schema.Types.ObjectId, ref: 'mrp_molds', mdl:dbModel['mrp_molds'], default:null},
                 cycle:dbType.measureType,
                 cavity:{ type: Number, default: 0},
                 quantityPerHour:{ type: Number, default: 0},
                 parameters:{type:Object,default:null}
             }],
             input: [{
-                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
                 quantity:{ type: Number, default: 0},
                 unitCode:{type: String, trim:true, default: ''},
                 percent:{ type: Number, default: 0}
             }],
             output: [{  //yan urunler
-                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+                item:{type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
                 quantity:{ type: Number, default: 0},
                 unitCode:{type: String, trim:true, default: ''},
                 percent:{ type: Number, default: 0}
@@ -32,13 +32,13 @@ module.exports=function(conn){
             parameters:{type: String, default: ''}
         }],
         materialSummary:[{
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
             quantity:{ type: Number, default: 0},
             unitCode:{type: String, trim:true, default: ''},
             percent:{ type: Number, default: 0}
         }],
         outputSummary:[{
-            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items'},
+            item: {type: mongoose.Schema.Types.ObjectId, ref: 'items', mdl:dbModel['items']},
             quantity:{ type: Number, default: 0},
             unitCode:{type: String, trim:true, default: ''},
             percent:{ type: Number, default: 0}
@@ -90,10 +90,10 @@ module.exports=function(conn){
     })
 
 
-    var collectionName='recipes'
-    var model=conn.model(collectionName, schema)
+    let collectionName='recipes'
+    let model=dbModel.conn.model(collectionName, schema)
     
-    model.removeOne=(member, filter,cb)=>{ sendToTrash(conn,collectionName,member,filter,cb) }
+    model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
     
     return model
 }
