@@ -1,11 +1,5 @@
 class DespatchIntegration {
 	constructor(url,username,password){
-		if(config.status=='development'){
-			url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
-			username='Uyumsoft'
-			password='Uyumsoft'
-			// eventLog(`${config.status.toUpperCase().brightYellow} Uyumsoft Test Kullanicisi`)
-		}
 		this.client=new WcfHelper(url,username,password,'IDespatchIntegration')
 	}
 
