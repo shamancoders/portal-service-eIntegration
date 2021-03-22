@@ -5,7 +5,6 @@ var downloadInterval=config.downloadInterval || 5000
 var serviceName=`eDespatch`
 var defaultServiceName=`eDespatch`
 var ioBox=(ioType)=>{ return ioType==0?'Outbox':'Inbox'}
-var taskListener=require('./task-listener')
 global.WcfHelper=require('../../bin/wcf-helper').WcfHelper
 
 exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
@@ -330,55 +329,62 @@ exports.getXslt=(dbModel,despatchDoc,cb)=>{
 var despatchHelper=require('./despatch-hepler.js')
 exports.sendToGib=(dbModel,despatchDoc,cb)=>{
 	try{
-		exports.getXslt(dbModel,despatchDoc,(err,xsltData)=>{
-			if(!err){
-				if(config.status=='development'){
-					despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
-					despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
-					despatchDoc.eIntegrator.despatch.username='Uyumsoft'
-					despatchDoc.eIntegrator.despatch.password='Uyumsoft'
+		dbModel.despatches.findOne({_id:despatchDoc._id},(err,irsaliyeDoc)=>{
+			if(dberr(err,cb)){
+				if(dbnull(irsaliyeDoc,cb)){
+					exports.getXslt(dbModel,despatchDoc,(err,xsltData)=>{
+						if(!err){
+							if(config.status=='development'){
+								despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
+								despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
+								despatchDoc.eIntegrator.despatch.username='Uyumsoft'
+								despatchDoc.eIntegrator.despatch.password='Uyumsoft'
+							}
+							var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
+
+							despatchDoc=despatchHelper.gonderilecekIrsaliyeAlanlariniDuzenle(despatchDoc,xsltData)
+
+							var despatchInfo=new SinifGrubu.DespatchInfo(despatchDoc)
+							var xmlstr=despatchInfo.generateXml()
+							var parseString = require('xml2js').parseString
+
+							tempLog(`sendToGib_request_${despatchDoc.ID.value}.xml`,xmlstr)
+							webService.SendDespatch([xmlstr],(err,data)=>{
+								if(!err){
+
+
+									irsaliyeDoc.despatchStatus='Queued'
+									irsaliyeDoc.localStatus='transferred'
+									irsaliyeDoc.localErrors=[]
+									irsaliyeDoc.uuid={value:data.value.attr.id}
+									irsaliyeDoc.ID={value:data.value.attr.number}
+									irsaliyeDoc.save((err)=>{
+										if(!err){
+											cb(null,data.value)
+										}else{
+											cb(err)
+										}
+									})
+
+								}else{
+									tempLog(`sendToGib_response_err_${despatchDoc.ID.value}.json`,JSON.stringify(err,null,2))
+									errorLog(`${serviceName}  sendToGib Hata:`,err)
+									irsaliyeDoc.despatchStatus='Error'
+									irsaliyeDoc.localStatus='transferred'
+									irsaliyeDoc.localErrors=[]
+									irsaliyeDoc.despatchErrors.push({code:(err.code || err.name),message:(err.message || err.name || 'HATA olustu')})
+									irsaliyeDoc.save(()=>{
+										cb(err)
+									})
+								}
+							})
+						}else{
+							cb(err)
+						}
+					})
 				}
-				var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
-				
-				despatchDoc=despatchHelper.gonderilecekIrsaliyeAlanlariniDuzenle(despatchDoc,xsltData)
-
-				// tempLog('despatchDoc.json',JSON.stringify(despatchDoc,null,2))
-				var despatchInfo=new SinifGrubu.DespatchInfo(despatchDoc)
-				var xmlstr=despatchInfo.generateXml()
-				var parseString = require('xml2js').parseString
-
-				tempLog(`sendToGib_request_${despatchDoc.ID.value}.xml`,xmlstr)
-				//throw 'hata yapalim gondermesin'
-				// /* DespatchInfo[] despatches */
-				webService.SendDespatch([xmlstr],(err,data)=>{
-					if(!err){
-						tempLog(`sendToGib_response_${despatchDoc.ID.value}.json`,JSON.stringify(data,null,2))
-
-						dbModel.despatches.updateMany({_id:despatchDoc._id},{
-							$set:{
-								despatchStatus:'Queued',
-								uuid:{value:data.value.attr.id},
-								ID:{value:data.value.attr.number}
-							}
-						},{multi:false},(err)=>{
-							if(!err){
-								cb(null,data.value)
-							}else{
-								cb(err)
-							}
-						})
-					}else{
-						tempLog(`sendToGib_response_err_${despatchDoc.ID.value}.json`,JSON.stringify(err,null,2))
-						errorLog(`${serviceName} Hata:`,err)
-						cb(err)
-					}
-				})
-			}else{
-				cb(err)
 			}
 		})
-		
-
 	}catch(e){
 		cb(e)
 	}
@@ -444,52 +450,66 @@ function queryDespatchStatus(dbModel,despatchDoc,cb){
 	try{
 		if(!despatchDoc.eIntegrator)
 			return cb(null)
-		if(config.status=='development'){
-			despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
-			despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
-			despatchDoc.eIntegrator.despatch.username='Uyumsoft'
-			despatchDoc.eIntegrator.despatch.password='Uyumsoft'
-		}
-		var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
-		var GetDespatchList=(query,cb)=>{
-			if(despatchDoc.ioType==0){
-				return webService.GetOutboxDespatchList(query,cb)
-			}else{
-				return webService.GetInboxDespatchList(query,cb)
-			}
-		}
-
-		var query={
-			DespatchIds:[despatchDoc.uuid.value],
-			PageIndex:0,
-			PageSize:1
-		}
-		GetDespatchList(query,(err,data)=>{
+		dbModel.despatches.findOne({_id:despatchDoc._id},(err,irsaliyeDoc)=>{
 			if(dberr(err,cb)){
-				if(!data.value)
-					return cb(null)
-				if(!data.value.items)
-					return cb(null)
+				if(dbnull(irsaliyeDoc,cb)){
 
-				if(!Array.isArray(data.value.items))
-					data.value.items=[clone(data.value.items)]
-				
-				var obj={
-					_id:despatchDoc._id,
-					uuid:data.value.items[0].despatchId,
-					ID:data.value.items[0].despatchNumber,
-					title:data.value.items[0].targetTitle,
-					vknTckn:data.value.items[0].targetTcknVkn,
-					despatchStatus:data.value.items[0].statusEnum
-				}
-				if(despatchDoc.despatchStatus!=data.value.items[0].statusEnum){
-					dbModel.despatches.updateMany({_id:despatchDoc._id},{$set:{despatchStatus:data.value.items[0].statusEnum}},{multi:false},(err)=>{
+					if(config.status=='development'){
+						despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
+						despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
+						despatchDoc.eIntegrator.despatch.username='Uyumsoft'
+						despatchDoc.eIntegrator.despatch.password='Uyumsoft'
+					}
+					var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
+					var GetDespatchList=(query,cb)=>{
+						if(despatchDoc.ioType==0){
+							return webService.GetOutboxDespatchList(query,cb)
+						}else{
+							return webService.GetInboxDespatchList(query,cb)
+						}
+					}
+
+					var query={
+						DespatchIds:[despatchDoc.uuid.value],
+						PageIndex:0,
+						PageSize:1
+					}
+					GetDespatchList(query,(err,data)=>{
 						if(dberr(err,cb)){
-							cb(null,obj)
+							if(!data.value)
+								return cb(null)
+							if(!data.value.items)
+								return cb(null)
+
+							if(!Array.isArray(data.value.items))
+								data.value.items=[clone(data.value.items)]
+
+							var obj={
+								_id:despatchDoc._id,
+								uuid:data.value.items[0].despatchId,
+								ID:data.value.items[0].despatchNumber,
+								title:data.value.items[0].targetTitle,
+								vknTckn:data.value.items[0].targetTcknVkn,
+								despatchStatus:data.value.items[0].statusEnum
+							}
+							tempLog(`${despatchDoc.ID.value}_queryDespatchStatus.json`,JSON.stringify(data,null,2))
+							if(despatchDoc.despatchStatus!=data.value.items[0].statusEnum){
+
+								irsaliyeDoc.despatchStatus=data.value.items[0].statusEnum
+								
+								if(irsaliyeDoc.despatchStatus!='Error'){
+									irsaliyeDoc.despatchErrors=[]
+								}
+								
+								irsaliyeDoc.save(()=>{
+									cb(null,obj)
+								})
+							}else{
+								cb(null,obj)
+							}
 						}
 					})
-				}else{
-					cb(null,obj)
+
 				}
 			}
 		})
@@ -501,9 +521,7 @@ function queryDespatchStatus(dbModel,despatchDoc,cb){
 function checkDespatcheStatus(dbModel,srvcName, callback){
 	var logPrefix=`${dbModel.nameLog} ${srvcName.green}`
 	var baslamaTarihi=(new Date()).addDays(-15).yyyymmdd()
-	if(config.status=='development'){
-		baslamaTarihi=(new Date()).addDays(-90).yyyymmdd()
-	}
+	
 	var options={page: 1, limit:50,
 		populate:[
 		{path:'eIntegrator',select:'_id eIntegrator despatch party'}
@@ -511,6 +529,11 @@ function checkDespatcheStatus(dbModel,srvcName, callback){
 		
 		select:'_id ioType eIntegrator ID uuid issueDate issueTime despatchStatus',
 		sort:{'issueDate.value':-1 , 'ID.value':-1}
+	}
+
+	if(config.status=='development'){
+		baslamaTarihi=(new Date()).addDays(-90).yyyymmdd()
+		options.sort={'issueDate.value':-1 , 'ID.value':-1}
 	}
 
 	var filter={
@@ -569,7 +592,7 @@ function checkDespatcheStatus(dbModel,srvcName, callback){
 // 							})
 // 						}else{
 // 							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'error',error:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
-// 								dbModel.despatches_receipt_advice.updateMany({_id:item.documentId},{$set:{receiptStatus:'Error',receiptErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+// 								dbModel.despatches_receipt_advice.updateMany({_id:item.documentId},{$set:{localStatus:'error',localErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
 // 									cb(null)
 // 								})
 // 							})
@@ -602,7 +625,7 @@ function task_sentToGib(dbModel,srvcName,callback){
 							})
 						}else{
 							dbModel.tasks.updateMany({_id:item._id},{$set:{status:'error',error:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
-								dbModel.despatches.updateMany({_id:item.documentId},{$set:{despatchStatus:'Error',despatchErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
+								dbModel.despatches.updateMany({_id:item.documentId},{$set:{localStatus:'error',localErrors:[{code:(err.code || err.name || 'TASK_ERROR'),message:err.message}]}},{multi:false},(err2)=>{
 									cb(null)
 								})
 							})
@@ -623,19 +646,19 @@ function task_sentToGib(dbModel,srvcName,callback){
 
 exports.start=()=>{
 	
-	// runServiceOnAllUserDb({
-	// 	filter:{'services.eIntegration.eDespatch':true},
-	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
-	// 	name:'eDespatch/download/outbox',
-	// 	repeatInterval:config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter:{'services.eIntegration.eDespatch':true},
+		serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
+		name:'eDespatch/download/outbox',
+		repeatInterval:config.repeatInterval || 60000
+	})
 
-	// runServiceOnAllUserDb({
-	// 	filter:{'services.eIntegration.eDespatch':true},
-	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,1,`eDespatch/${'download'.cyan}/inbox`,cb) },
-	// 	name:'eDespatch/download/inbox',
-	// 	repeatInterval:config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter:{'services.eIntegration.eDespatch':true},
+		serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,1,`eDespatch/${'download'.cyan}/inbox`,cb) },
+		name:'eDespatch/download/inbox',
+		repeatInterval:config.repeatInterval || 60000
+	})
 
 	runServiceOnAllUserDb({
 		filter:{'services.eIntegration.eDespatch':true},

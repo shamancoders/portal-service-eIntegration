@@ -38,7 +38,7 @@ function send(dbModel,req,res,next,cb){
 				if(!err){
 					cb(`${docs.length} adet evrak kuyruga eklendi`)
 				}else{
-					console.log('iterasyon err:',err)
+					errorLog('iterasyon err:',err)
 					next(err)
 				}
 			})
@@ -54,10 +54,9 @@ function addNewTaskList(dbModel,doc,cb){
 		document:doc.toJSON(),
 		status:'pending'
 	}
-	console.log('doc._id:',doc._id)
 	taskHelper.newTask(dbModel,taskData,(err,taskDoc)=>{
 		if(!err){
-			dbModel.despatches.updateMany({_id:doc._id},{$set:{despatchStatus:'Pending'}},{multi:false},(err,c)=>{
+			dbModel.despatches.updateMany({_id:doc._id},{$set:{localStatus:'pending'}},{multi:false},(err,c)=>{
 				cb(null,{taskId:taskDoc._id,taskType:taskDoc.taskType,collectionName:taskDoc.collectionName,documentId:taskDoc.documentId,status:taskDoc.status})	
 			})
 			

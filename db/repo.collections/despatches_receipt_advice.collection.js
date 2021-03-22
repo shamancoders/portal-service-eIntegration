@@ -40,6 +40,8 @@ module.exports=function(dbModel){
         receiptStatus: {type: String, default: 'Draft',enum:['Draft','Pending','Queued', 'Processing','SentToGib','Success','Error']},
         receiptErrors:[{_date:{ type: Date,default: Date.now}, code:'',message:''}],
         receiptErrors:[{_date:{ type: Date,default: Date.now}, code:'',message:''}],
+        localStatus: {type: String, default: '',enum:['','transferring','pending','transferred','error']},
+        localErrors:[{_date:{ type: Date,default: Date.now}, code:'',message:''}],
         createdDate: { type: Date,default: Date.now},
         modifiedDate:{ type: Date,default: Date.now}
     })

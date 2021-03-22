@@ -58,7 +58,7 @@ function addNewTaskList(dbModel,doc,cb){
 	
 	taskHelper.newTask(dbModel,taskData,(err,taskDoc)=>{
 		if(!err){
-			dbModel.despatches_receipt_advice.updateMany({_id:doc._id},{$set:{receiptStatus:'Pending'}},{multi:false},(err,c)=>{
+			dbModel.despatches_receipt_advice.updateMany({_id:doc._id},{$set:{localStatus:'pending'}},{multi:false},(err,c)=>{
 				cb(null,{taskId:taskDoc._id,taskType:taskDoc.taskType,collectionName:taskDoc.collectionName,documentId:taskDoc.documentId,status:taskDoc.status})	
 			})
 			

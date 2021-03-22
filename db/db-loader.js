@@ -190,10 +190,7 @@ function baglan(collectionFolder, mongoAddress, dbObj, cb){
 				dbObj.conn.on('disconnected', ()=>{
 					dbObj.conn.active=false
 					eventLog(`${dbObj.nameLog} ${'disconnected'.cyan}`)
-					if(repoDb[dbObj._id]!=undefined){
-						repoDb[dbObj._id]=undefined
-						delete repoDb[dbObj._id]
-					}
+					
 				})
 			}else{
 				if(cb)
@@ -281,6 +278,8 @@ global.repoDbModel=function(_id,cb){
 						}
 					})
 				})
+
+
 				cb(null,dbModel)
 			}
 		}
@@ -327,7 +326,7 @@ global.runServiceOnAllUserDb=(options)=>{
 		if(!calisanServiceDatabaseler[serviceName]){
 			calisanServiceDatabaseler[serviceName]={}
 		}
-
+		// eventLog(`${serviceName.yellow} filter:`,filter)
 		function calistir(){
 			db.dbdefines.find(filter).select('_id').exec((err,docs)=>{
 				if(!err){
@@ -370,4 +369,27 @@ global.runServiceOnAllUserDb=(options)=>{
 		errorLog(`try catch error:`,tryErr)
 		setTimeout(()=>{ runServiceOnAllUserDb(options) },options.repeatInterval)
 	}
+}
+
+
+global.dbStats=function(doc,cb){
+	var conn
+	switch(doc.userDbHost){
+		case config.mongodb.server1:
+		conn=serverConn1.useDb(doc.userDb)
+		break
+		case config.mongodb.server2:
+		conn=serverConn2.useDb(doc.userDb)
+		break
+		case config.mongodb.server3:
+		conn=serverConn3.useDb(doc.userDb)
+		break
+	}
+	conn.db.stats((err,statsObj)=>{
+		if(!err){
+			cb(null,statsObj)
+		}else{
+			cb(err)
+		}
+	})
 }

@@ -49,17 +49,17 @@ module.exports=()=>{
 }
 
 
-// process.on('uncaughtException', function (err) {
-// 	errorLog('Caught exception: ', err)
+process.on('uncaughtException', function (err) {
+	errorLog('Caught exception: ', err)
 	
-// 	// mail.sendErrorMail(`Err ${config.status} ${app.get('name')}`,err,(mailErr,info)=>{
-// 	// 	if(mailErr)
-// 	// 		console.log(`mailErr:`,mailErr)
-// 	// 	console.log(`mail info:`,info)
-// 	// 	process.exit(0)
-// 	// })
+	// mail.sendErrorMail(`Err ${config.status} ${app.get('name')}`,err,(mailErr,info)=>{
+	// 	if(mailErr)
+	// 		console.log(`mailErr:`,mailErr)
+	// 	console.log(`mail info:`,info)
+	// 	// process.exit(0)
+	// })
 
-// })
+})
 
 /* [CONTROLLER TEST] */
 function testControllers(log){
