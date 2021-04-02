@@ -1,31 +1,19 @@
 module.exports=function(dbModel){
-    let schema = mongoose.Schema({
-        collectionName: {type: String, default: ''},
-        documentId: {type: mongoose.Schema.Types.ObjectId, default: null},
-        document: {type: Object, default: null},
-        deletedBy: {type: String, required: true, default: ''},
-        deletedDate: { type: Date,required: true, default: Date.now}
-    })
+	let collectionName=path.basename(__filename,'.collection.js')
+	let schema = mongoose.Schema({
+		collectionName: {type: String, default: '',index:true},
+		documentId: {type: mongoose.Schema.Types.ObjectId, default: null,index:true},
+		document: {type: Object, default: null},
+		deletedBy: {type: String, required: true, default: '',index:true},
+		deletedDate: { type: Date,required: true, default: Date.now,index:true}
+	})
 
-    schema.pre('save', function(next) {
-        next()
-        //bir seyler ters giderse 
-        // next(new Error('ters giden birseyler var'))
-    })
-    schema.pre('remove', function(next) {
-        next()
-    })
-
-    schema.pre('remove', true, function(next, done) {
-        next()
-        //bir seyler ters giderse 
-        // next(new Error('ters giden birseyler var'))
-    })
-
-    schema.on('init', function(model) {
-
-    })
-    schema.plugin(mongoosePaginate)
-    
-    return conn.model('recycle', schema)
+	schema.pre('save', (next)=>next())
+	schema.pre('remove', (next)=>next())
+	schema.pre('remove', true, (next, done)=>next())
+	schema.on('init', (model)=>{})
+	schema.plugin(mongoosePaginate)
+	
+	let model=dbModel.conn.model(collectionName, schema)
+	return model
 }

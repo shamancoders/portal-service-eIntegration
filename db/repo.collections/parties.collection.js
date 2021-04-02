@@ -1,4 +1,5 @@
 module.exports=function(dbModel){
+	let collectionName=path.basename(__filename,'.collection.js')
 	let schema = mongoose.Schema({
 		partyType:{ type: String, trim:true, default: '',enum:['Customer','Vendor','Both','Agency'],index:true},
 		mainParty: {type: mongoose.Schema.Types.ObjectId, 
@@ -15,7 +16,6 @@ module.exports=function(dbModel){
 			default:null
 		},
 		account: {type: mongoose.Schema.Types.ObjectId, ref: 'accounts', mdl:dbModel['accounts'],default:null},
-		// account: {type: mongoose.Schema.Types.ObjectId, default:null},
 		websiteURI:dbType.valueType,
 		partyIdentification:[dbType.partyIdentificationType],
 		partyName:{
@@ -36,29 +36,13 @@ module.exports=function(dbModel){
 		modifiedDate:{ type: Date,default: Date.now}
 	})
 
-	schema.pre('save', function(next) {
-		next()
-        //bir seyler ters giderse 
-        // next(new Error('ters giden birseyler var'))
-      })
-	schema.pre('remove', function(next) {
-		next()
-	})
-
-	schema.pre('remove', true, function(next, done) {
-		next()
-        //bir seyler ters giderse 
-        // next(new Error('ters giden birseyler var'))
-      })
-
-	schema.on('init', function(model) {
-
-	})
-	
-
+	schema.pre('save', (next)=>next())
+	schema.pre('remove', (next)=>next())
+	schema.pre('remove', true, (next, done)=>next())
+	schema.on('init', (model)=>{})
 	schema.plugin(mongoosePaginate)
 	schema.plugin(mongooseAggregatePaginate)
-	
+
 	schema.index({
 		"partyName.name.value":1,
 		"partyType":1,
@@ -72,9 +56,7 @@ module.exports=function(dbModel){
 		"tags":1
 	})
 
-	let collectionName='parties'
 	let model=dbModel.conn.model(collectionName, schema)
-	
 	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
 	
 	return model

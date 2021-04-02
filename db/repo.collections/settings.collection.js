@@ -1,4 +1,5 @@
 module.exports=function(dbModel){
+	let collectionName=path.basename(__filename,'.collection.js')
 	let schema = mongoose.Schema({
 		type:{type: String, default:'', enum:['global','user'],index:true},
 		memberId: {type: mongoose.Schema.Types.ObjectId, default: null,index:true},
@@ -24,27 +25,12 @@ module.exports=function(dbModel){
 		this.name=`${this.type}_${this.module}`
 		next()
 	})
-	schema.pre('remove', function(next) {
-		next()
-	})
-
-	schema.pre('remove', true, function(next, done) {
-		next()
-	})
-
-	schema.on('init', function(model) {
-
-	})
-	
-
+	schema.pre('remove', (next)=>next())
+	schema.pre('remove', true, (next, done)=>next())
+	schema.on('init', (model)=>{})
 	schema.plugin(mongoosePaginate)
 	schema.plugin(mongooseAggregatePaginate)
 	
-
-	let collectionName='settings'
 	let model=dbModel.conn.model(collectionName, schema)
-	
-	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
-	
 	return model
 }

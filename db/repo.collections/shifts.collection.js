@@ -1,4 +1,5 @@
 module.exports=function(dbModel){
+	let collectionName=path.basename(__filename,'.collection.js')
 	let schema = mongoose.Schema({
 		name:{ type: String, trim:true,required: [true,'Isim gereklidir'], default: ''},
 		times:[{
@@ -13,34 +14,15 @@ module.exports=function(dbModel){
 		modifiedDate:{ type: Date,default: Date.now}
 	})
 
-	schema.pre('save', function(next) {
-		next()
-		//bir seyler ters giderse 
-		// next(new Error('ters giden birseyler var'))
-	})
-	schema.pre('remove', function(next) {
-		next()
-	})
-
-	schema.pre('remove', true, function(next, done) {
-		next()
-		//bir seyler ters giderse 
-		// next(new Error('ters giden birseyler var'))
-	})
-
-	schema.on('init', function(model) {
-
-	})
-	
-
+	schema.pre('save', (next)=>next())
+	schema.pre('remove', (next)=>next())
+	schema.pre('remove', true, (next, done)=>next())
+	schema.on('init', (model)=>{})
 	schema.plugin(mongoosePaginate)
 	schema.plugin(mongooseAggregatePaginate)
-	
 
-	let collectionName='shifts'
 	let model=dbModel.conn.model(collectionName, schema)
-	
 	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
-	
+
 	return model
 }

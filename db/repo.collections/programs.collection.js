@@ -1,10 +1,8 @@
 module.exports=function(dbModel){
+	let collectionName=path.basename(__filename,'.collection.js')
 	let schema = mongoose.Schema({
 		name: {type: String, required: [true,'Isim gereklidir.']},
-		// showButtonText: {type: Boolean, default: false},
 		type: {type: String, required: [true,'Program türü gereklidir.'],enum:['collection-process','file-importer','file-exporter','connector-importer','connector-exporter','email','sms']},
-		// icon: {type :String, default:''},		
-		// class: {type :String, default:''},		
 		collections:[{
 			name:{type :String, default:''},
 			filter:{type :String, default:''},
@@ -13,7 +11,7 @@ module.exports=function(dbModel){
 		}],
 		files:[{
 			fileName:{type :String, default:''},
-			data:{type :String, default:''}, //base64
+			data:{type :String, default:''},
 			randerEngine:{type :String, default:'ejs'}
 		}],
 		fileImporter:{
@@ -54,30 +52,14 @@ module.exports=function(dbModel){
 		passive: {type: Boolean, default: false}
 	})
 
-	schema.pre('save', function(next) {
-		next()
-	})
-	schema.pre('remove', function(next) {
-		next()
-	})
-
-	schema.pre('remove', true, function(next, done) {
-		next()
-
-	})
-
-	schema.on('init', function(model) {
-
-	})
+	schema.pre('save', (next)=>next())
+	schema.pre('remove', (next)=>next())
+	schema.pre('remove', true, (next, done)=>next())
+	schema.on('init', (model)=>{})
 	schema.plugin(mongoosePaginate)
+	schema.plugin(mongooseAggregatePaginate)
 
-
-	let collectionName='programs'
 	let model=dbModel.conn.model(collectionName, schema)
-
 	model.removeOne=(member, filter,cb)=>{ sendToTrash(dbModel.conn,collectionName,member,filter,cb) }
-
-    //model.relations={pos_devices:'localConnector'}
-
-    return model
-  }
+	return model
+}
