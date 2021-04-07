@@ -18,20 +18,29 @@ exports.get=(endpoint, params, cb)=>{
 
 	request(options, (error, response, body)=>{
 		
-		if(error) 
-			return cb(error)
+		if(error){
+			if(cb){
+				return servisCalisiyorMu(error,cb)
+			}else{
+				return
+			}
+			
+		}
 		try{
 			var resp=JSON.parse(body)
 			if(resp.success){
-				if(cb)
+				if(cb){
 					cb(null,resp.data)
+				}
 			}else{
-				if(cb)
-					cb(resp.error)
+				if(cb){
+					servisCalisiyorMu(resp.error,cb)
+				}
 			}
 		}catch(e){
-			if(cb)
-				cb(e)
+			if(cb){
+				servisCalisiyorMu(e,cb)
+			}
 		}
 	})
 }
@@ -53,13 +62,15 @@ exports.getFile=(endpoint, params, cb)=>{
 
 	request(options, (error, response, body)=>{
 		if(error){
-			if(cb)
-				return cb(error)
-			else
+			if(cb){
+				return servisCalisiyorMu(error,cb)
+			}else{
 				return
+			}
 		}
-		if(cb)
+		if(cb){
 			cb(null,body)
+		}
 	})
 }
 
@@ -87,30 +98,35 @@ exports.post=(endpoint,jsonData, cb)=>{
 				try{
 					var resp=JSON.parse(body)
 					if(resp.success){
-						if(cb)
+						if(cb){
 							cb(null,resp.data)
+						}
 					}else{
-						if(cb)
-							cb(resp.error)
+						if(cb){
+							servisCalisiyorMu(resp.error)
+						}
 					}
 
 				}catch(e){
-					if(cb)
-						cb(e)
+					if(cb){
+						servisCalisiyorMu(e,cb)
+					}
 				}
 			}else{
 				if(body.success){
 					if(cb)
 						cb(null,body.data)
 				}else{
-					if(cb)
-						cb(body.error)
+					if(cb){
+						servisCalisiyorMu(body.error,cb)
+					}
 				}
 			}
 
 		}else{
-			if(cb)
-				cb(error?error:body.error)
+			if(cb){
+				servisCalisiyorMu(error?error:body.error,cb)
+			}
 		}
 	})
 
@@ -137,28 +153,35 @@ exports.put=(endpoint, jsonData, cb)=>{
 				try{
 					var resp=JSON.parse(body)
 					if(resp.success){
-						if(cb)
+						if(cb){
 							cb(null,resp.data)
+						}
 					}else{
-						if(cb)
-							cb(resp.error)
+						if(cb){
+							servisCalisiyorMu(resp.error,cb)
+						}
 					}
 
 				}catch(e){
-					cb(e)
+					if(cb){
+						servisCalisiyorMu(e,cb)
+					}
 				}
 			}else{
 				if(body.success){
-					if(cb)
+					if(cb){
 						cb(null,body.data)
+					}
 				}else{
-					if(cb)
-						cb(body.error)
+					if(cb){
+						servisCalisiyorMu(body.error,cb)
+					}
 				}
 			}
 		}else{
-			if(cb)
-				cb(error?error:body.error)
+			if(cb){
+				servisCalisiyorMu(error?error:body.error,cb)
+			}
 		}
 	})
 
@@ -181,7 +204,7 @@ exports.delete=(endpoint, cb)=>{
 	request(options, (error, response, body)=>{
 		if(error){
 			if(cb)
-				return cb(error)
+				return servisCalisiyorMu(error,cb)
 			else
 				return
 		}
@@ -192,15 +215,35 @@ exports.delete=(endpoint, cb)=>{
 					cb(null,(resp.data || 'ok'))
 			}else{
 				if(cb)
-					cb(resp.error)
+					servisCalisiyorMu(resp.error,cb)
 			}
 		}catch(e){
-			if(cb)
-				cb(e)
+			if(cb){
+				servisCalisiyorMu(e,cb)
+			}
 		}
 	})
 }
 
+function servisCalisiyorMu(err,cb){
+	
+	// errorLog(err)
+	if(err.code==='ECONNREFUSED'){
+		let errObj={
+			code:err.code,
+			message:`${err.address || ''}:${err.port || 0} Servis calismiyor!`
+		}
+
+		mail.sendErrorMail(`${(new Date()).yyyymmddhhmmss()} Rest Service Error`,errObj)
+		if(cb){
+			cb(errObj)
+		}
+	}else{
+		if(cb){
+			cb(err)
+		}
+	}
+}
 module.exports=(url)=>{
 	return {
 		get:function (dbModel, endpoint, params, cb){
@@ -243,6 +286,5 @@ module.exports=(url)=>{
 			}
 			return exports.delete(endpoint,cb)
 		}
-
 	}
 }

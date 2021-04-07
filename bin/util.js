@@ -54,6 +54,12 @@ Date.prototype.addDays = function(days)
 	return dat
 }
 
+Date.prototype.lastThisMonth = function()
+{
+	var dat = new Date(this.valueOf());
+	dat=new Date((new Date(dat.setMonth(dat.getMonth()+1))).setDate(0))
+	return dat
+}
 
 exports.timeStamp = function () { return (new Date).yyyymmddhhmmss() };  
 

@@ -1,8 +1,9 @@
 module.exports=function(dbModel){
 	let collectionName=path.basename(__filename,'.collection.js')
 	let schema = mongoose.Schema({
-		ledgerYear:{ type: Number,default: ()=>(new Date()).getFullYear() , index:true},
-		ledgerPeriod:{ type: Number,default: ()=>(new Date()).getMonth()+1 , index:true},
+		ledger: {type: mongoose.Schema.Types.ObjectId, default:null, ref: 'accounting_ledgers', mdl:dbModel.accounting_ledgers},
+		year:{ type: Number,default: 0, index:true},
+		period:{ type: Number,default: 0 , index:true},
 		startDate: {type: String, default:'', index:true },
 		endDate: {type: String, default:'', index:true },
 		enteredBy: {type: mongoose.Schema.Types.ObjectId,default:null , index:true},
@@ -15,7 +16,7 @@ module.exports=function(dbModel){
 		documentType: {type: String, default:'', index:true },
 		documentTypeDescription: {type: String, default:'', index:true },
 		documentNumber: {type: String, default:'', index:true },
-		documentDate: {type: String, default:'', index:true },
+		documentDate: {type: String, required:[true,'Belge tarihi zorunludur'], index:true },
 		paymentMethod: {type: String, default:'', index:true },
 		journalNumber:{ type: Number,default: 0 , index:true },
 		entryLine:[{
@@ -32,7 +33,53 @@ module.exports=function(dbModel){
 		modifiedDate:{ type: Date,default: Date.now, index:true }
 	})
 
-	schema.pre('save', (next)=>next())
+	schema.pre('save', (next)=>{
+		if(!isNaN(this.documentDate.substr(0,4))){
+			if(Number(this.documentDate.substr(0,4))!=this.year){
+				return next({code:'SYNTAX_ERROR',message:'Belge tarihi ile çalışma yılı tutarsız'})
+			}
+		}else{
+			return next({code:'SYNTAX_ERROR',message:'Belge tarihi hatalı'})
+		}
+		if(!isNaN(this.documentDate.substr(5,2))){
+			if(Number(this.documentDate.substr(5,2))!=this.period){
+				return next({code:'SYNTAX_ERROR',message:'Belge tarihi ile çalışma periyodu(ay) tutarsız'})
+			}
+		}else{
+			return next({code:'SYNTAX_ERROR',message:'Belge tarihi hatalı'})
+		}
+		this.startDate=(new Date(this.year,this.period-1,1)).yyyymmdd()
+		this.endDate=(new Date(this.year,this.period-1,1)).lastThisMonth().yyyymmdd()
+		this.totalDebit=0
+		this.totalCredit=0
+		if(this.entryLine){
+			if(Array.isArray(this.entryLine)){
+				var hata=''
+				this.entryLine.forEach((e)=>{
+					if((e.detailComment || '')==''){
+						e.detailComment=this.entryComment
+					}
+					e.postingDate=this.documentDate
+					if(e.debit>0 && e.credit>0){
+						hata+='Hem borç hem alacak sıfırdan büyük olamaz. '
+					}else if(e.debit<0 || e.credit<0){
+						hata+='Borç ve alacak negatif değer olamaz. '
+					}
+					e.debit=Math.round(100*e.debit)/100
+					e.credit=Math.round(100*e.credit)/100
+					this.totalDebit+=e.debit
+					this.totalCredit+=e.credit
+				})
+				if(hata!=''){
+					return next({code:'SYNTAX_ERROR',message:hata})
+				}
+			}
+		}
+
+		if(this.totalDebit!=this.totalCredit){
+			return next({code:'SYNTAX_ERROR',message:'Borc ve alacak toplami eşit değildir'})
+		}
+	})
 	schema.pre('remove', (next)=>next())
 	schema.pre('remove', true, (next, done)=>next())
 	schema.on('init', (model)=>{})

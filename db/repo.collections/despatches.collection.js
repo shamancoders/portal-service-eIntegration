@@ -55,7 +55,8 @@ module.exports=function(dbModel){
 		if(this.despatchLine){
 			this.lineCountNumeric.value=this.despatchLine.length
 		}
-		updateActions(dbModel,this,next)
+		next()
+		// updateActions(dbModel,this,next)
 	})
 
 	schema.pre('remove', (next)=>next())
@@ -88,7 +89,8 @@ module.exports=function(dbModel){
 function updateActions(dbModel,doc,next){
 	let index=0
 	function kaydet(cb){
-		if(index>=doc.despatchLine.length) return cb(null)
+		if(index>=doc.despatchLine.length)
+			return cb(null)
 			if(doc.despatchLine[index].item._id){
 				let newActionDoc=new dbModel.actions(dbType.actionType)
 				newActionDoc.actionType='despatch'

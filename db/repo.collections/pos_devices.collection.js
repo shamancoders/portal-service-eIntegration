@@ -7,7 +7,8 @@ module.exports=function(dbModel){
 		deviceModel: {type: String, default: '', index:true},
 		createdDate: { type: Date,default: Date.now},
 		modifiedDate:{ type: Date,default: Date.now},
-		passive: {type: Boolean, default: false, index:true}
+		passive: {type: Boolean, default: false, index:true},
+		lastError:{_date:{ type: Date,default: Date.now}, code:'',message:''}
 	})
 
 	schema.pre('save', (next)=>next())

@@ -313,12 +313,7 @@ exports.getXslt=(dbModel,despatchDoc,cb)=>{
 		dbModel.files.findOne({_id:despatchDoc.eIntegrator.despatch.xslt},(err,doc)=>{
 			if(!err){
 				if(doc!=null){
-					if(doc.data.indexOf('base64,')>-1){
-						cb(null,doc.data.split('base64,')[1])
-					}else{
-						cb(null,doc.data)
-					}
-					
+					cb(null,doc.data.replace('data:application/xml;base64,',''))
 				}else{
 					cb(null)
 				}
@@ -334,62 +329,62 @@ exports.getXslt=(dbModel,despatchDoc,cb)=>{
 var despatchHelper=require('./despatch-hepler.js')
 exports.sendToGib=(dbModel,despatchDoc,cb)=>{
 	try{
-		// dbModel.despatches.findOne({_id:despatchDoc._id},(err,irsaliyeDoc)=>{
-		// 	if(dberr(err,cb)){
-		// 		if(dbnull(irsaliyeDoc,cb)){
-			exports.getXslt(dbModel,despatchDoc,(err,xsltData)=>{
-				if(!err){
-					if(config.status=='development'){
-						despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
-						despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
-						despatchDoc.eIntegrator.despatch.username='Uyumsoft'
-						despatchDoc.eIntegrator.despatch.password='Uyumsoft'
-					}
-					var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
-
-					despatchDoc=despatchHelper.gonderilecekIrsaliyeAlanlariniDuzenle(despatchDoc,xsltData)
-
-					var despatchInfo=new SinifGrubu.DespatchInfo(despatchDoc)
-					var xmlstr=despatchInfo.generateXml()
-					var parseString = require('xml2js').parseString
-
-					tempLog(`sendToGib_request_${despatchDoc.ID.value}.xml`,xmlstr)
-					webService.SendDespatch([xmlstr],(err,data)=>{
+		dbModel.despatches.findOne({_id:despatchDoc._id},(err,irsaliyeDoc)=>{
+			if(dberr(err,cb)){
+				if(dbnull(irsaliyeDoc,cb)){
+					exports.getXslt(dbModel,despatchDoc,(err,xsltData)=>{
 						if(!err){
+							if(config.status=='development'){
+								despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
+								despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
+								despatchDoc.eIntegrator.despatch.username='Uyumsoft'
+								despatchDoc.eIntegrator.despatch.password='Uyumsoft'
+							}
+							var webService=new SinifGrubu.DespatchIntegration(despatchDoc.eIntegrator.despatch.url,despatchDoc.eIntegrator.despatch.username,despatchDoc.eIntegrator.despatch.password)
 
+							despatchDoc=despatchHelper.gonderilecekIrsaliyeAlanlariniDuzenle(despatchDoc,xsltData)
 
-							despatchDoc.despatchStatus='Queued'
-							despatchDoc.localStatus='transferred'
-							despatchDoc.localErrors=[]
-							despatchDoc.uuid={value:data.value.attr.id}
-							despatchDoc.ID={value:data.value.attr.number}
-							despatchDoc.save((err)=>{
+							var despatchInfo=new SinifGrubu.DespatchInfo(despatchDoc)
+							var xmlstr=despatchInfo.generateXml()
+							var parseString = require('xml2js').parseString
+
+							tempLog(`sendToGib_request_${despatchDoc.ID.value}.xml`,xmlstr)
+							webService.SendDespatch([xmlstr],(err,data)=>{
 								if(!err){
-									cb(null,data.value)
+
+
+									irsaliyeDoc.despatchStatus='Queued'
+									irsaliyeDoc.localStatus='transferred'
+									irsaliyeDoc.localErrors=[]
+									irsaliyeDoc.uuid={value:data.value.attr.id}
+									irsaliyeDoc.ID={value:data.value.attr.number}
+									irsaliyeDoc.save((err)=>{
+										if(!err){
+											cb(null,data.value)
+										}else{
+											cb(err)
+										}
+									})
+
 								}else{
-									cb(err)
+									tempLog(`sendToGib_response_err_${despatchDoc.ID.value}.json`,JSON.stringify(err,null,2))
+									errorLog(`${serviceName}  sendToGib Hata:`,err)
+									irsaliyeDoc.despatchStatus='Error'
+									irsaliyeDoc.localStatus='transferred'
+									irsaliyeDoc.localErrors=[]
+									irsaliyeDoc.despatchErrors.push({code:(err.code || err.name),message:(err.message || err.name || 'HATA olustu')})
+									irsaliyeDoc.save(()=>{
+										cb(err)
+									})
 								}
 							})
-
 						}else{
-							tempLog(`sendToGib_response_err_${despatchDoc.ID.value}.json`,JSON.stringify(err,null,2))
-							errorLog(`${serviceName}  sendToGib Hata:`,err)
-							despatchDoc.despatchStatus='Error'
-							despatchDoc.localStatus='transferred'
-							despatchDoc.localErrors=[]
-							despatchDoc.despatchErrors.push({code:(err.code || err.name),message:(err.message || err.name || 'HATA olustu')})
-							despatchDoc.save(()=>{
-								cb(err)
-							})
+							cb(err)
 						}
 					})
-				}else{
-					cb(err)
 				}
-			})
-		// 		}
-		// 	}
-		// })
+			}
+		})
 	}catch(e){
 		cb(e)
 	}
@@ -623,19 +618,16 @@ function task_sentToGib(dbModel,srvcName,callback){
 		if(dberr(err,callback)){
 			if(docs.length>0){
 				eventLog(`${dbModel.nameLog} ${serviceName.cyan}, task count:${docs.length}`)
-				iteration(docs,(despatchDoc,cb)=>{
-					despatchDoc.localStatus='transferring'
-					despatchDoc.localErrors=[]
-					despatchDoc.save()
-					exports.sendToGib(dbModel,despatchDoc,(err)=>{
+				iteration(docs,(item,cb)=>{ 
+					exports.sendToGib(dbModel,item,(err)=>{
 						if(!err){
-							despatchDoc.localStatus='transferred'
-							despatchDoc.localErrors=[]
+							item.localStatus='transferred'
+							item.localErrors=[]
 						}else{
-							despatchDoc.localStatus='error'
-							despatchDoc.localErrors.push({code:(err.code || err.name || 'TASK_ERROR'),message:err.message})
+							item.localStatus='error'
+							item.localErrors.push({code:(err.code || err.name || 'TASK_ERROR'),message:err.message})
 						}
-						despatchDoc.save(cb)
+						item.save(cb)
 					})
 				},0,true,(err,result)=>{
 					if(callback){
