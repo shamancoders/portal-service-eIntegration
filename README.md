@@ -11,4 +11,4 @@ This service helps for Turkey Government's Electronic Transformation
 
 ## Supported Integrators
 
-* [Uyumsoft{:target="_blank"}](https://www.uyumsoft.com/)
+* [Uyumsoft](https://www.uyumsoft.com/)
