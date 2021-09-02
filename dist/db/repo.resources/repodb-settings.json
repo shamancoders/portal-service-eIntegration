@@ -1,0 +1,10 @@
+{
+	// --- Irsaliye Ayarlari ---
+
+	// gelen irsaliyedeki cari bilgileri ile otomatik tedarikci karti acilmasi
+	"despatch_inbox_auto_create_vendor":false,
+
+	// giden irsaliyedeki cari bilgileri ile otomatik musteri karti acilmasi
+	"despatch_outbox_auto_create_customer":false
+
+}
