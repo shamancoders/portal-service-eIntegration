@@ -3,13 +3,16 @@ node_modules/
 platforms/
 plugins/
 
+node_modules
+
 # Logs
 logs
 *.log
 *.zip
 *.bat
-config*.json
+config*.json*
 * - Copy.*
+!!__*
 *private*
 *temp*
 *-lock.json
