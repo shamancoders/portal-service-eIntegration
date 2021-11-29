@@ -1,9 +1,6 @@
-global.__root=__dirname
+global.__root = __dirname
+require('./lib/initialize-app')(() => {
+	require('./app')()
 
-require('./bin/initialize-app')
+})
 
-var start=require('./eIntegrationApp')
-
-appInfo()
-
-start()

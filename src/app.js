@@ -10,7 +10,7 @@ var favicon = require('serve-favicon')
 
 var indexRouter = require('./routes/index')
 var dbLoader = require('./db/db-loader')
-var httpServer=require('./bin/http-server.js')
+var httpServer=require('./lib/http-server.js')
 
 global.app = express()
 var cors = require('cors')
@@ -35,7 +35,7 @@ module.exports=()=>{
 		dbLoader((err)=>{
 			if(!err){
 				
-				global.taskHelper=require('./bin/taskhelper')
+				global.taskHelper=require('./lib/taskhelper')
 				global.eDespatch=require('./eDespatch/services/e-despatch')
 				global.eInvoice=require('./eInvoice/services/e-invoice')
 				eDespatch.start()
@@ -52,12 +52,10 @@ module.exports=()=>{
 process.on('uncaughtException', function (err) {
 	errorLog('Caught exception: ', err)
 	
-	// mail.sendErrorMail(`Err ${config.status} ${app.get('name')}`,err,(mailErr,info)=>{
-	// 	if(mailErr)
-	// 		console.log(`mailErr:`,mailErr)
-	// 	console.log(`mail info:`,info)
-	// 	// process.exit(0)
-	// })
+	if(config.status!='development'){
+		mail.sendErrorMail(`${(new Date()).yyyymmddhhmmss()} ${app.get('name')} Error`,errObj)
+		
+	}
 
 })
 

@@ -4,7 +4,7 @@ var downloadInterval=2000
 var taskInterval=5000
 var serviceName=`[eInvoice]`.yellow
 
-global.WcfHelper=require('../../bin/wcf-helper').WcfHelper
+global.WcfHelper=require(path.join(__root,'lib/wcf-helper')).WcfHelper
 
 var sync=require('./sync')
 

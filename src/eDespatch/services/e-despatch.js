@@ -5,7 +5,7 @@ var downloadInterval=config.downloadInterval || 5000
 var serviceName=`eDespatch`
 var defaultServiceName=`eDespatch`
 var ioBox=(ioType)=>{ return ioType==0?'Outbox':'Inbox'}
-global.WcfHelper=require('../../bin/wcf-helper').WcfHelper
+global.WcfHelper=require(path.join(__root,'lib/wcf-helper')).WcfHelper
 
 exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
 	var logPrefix=`${dbModel.nameLog} ${defaultServiceName.green + '/GetDespatch'.cyan + '/' + ioBox(ioType)},`
