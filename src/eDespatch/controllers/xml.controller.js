@@ -14,6 +14,7 @@ module.exports = (dbModel, req, res, next, cb)=>{
 					var xmlstr=`<?xml version="1.0" encoding="utf-8"?>` + util.e_despatch2xml(doc)
 					xmlstr=xmlstr.replaceAll('<DespatchAdvice','<q1:DespatchAdvice').replaceAll('</DespatchAdvice','</q1:DespatchAdvice')
 					
+					// cb({file:{fileName:`${doc.ID.value}.xml`,data:xmlstr}})
 					cb({file:{fileName:`${doc.ID.value}.xml`,data:xmlstr}})
 				}
 			})
