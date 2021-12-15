@@ -48,16 +48,12 @@ module.exports=()=>{
 	})
 }
 
-
-process.on('uncaughtException', function (err) {
-	errorLog('Caught exception: ', err)
-	
-	if(config.status!='development'){
-		mail.sendErrorMail(`${(new Date()).yyyymmddhhmmss()} ${app.get('name')} Error`,errObj)
-		
-	}
-
-})
+if(config.status != 'development') {
+	process.on('uncaughtException', function(err) {
+		errorLog('Caught exception: ', err)
+		mail.sendErrorMail(`${(new Date()).yyyymmddhhmmss()} ${app.get('name')} Error`, err)
+	})
+}
 
 /* [CONTROLLER TEST] */
 function testControllers(log){
