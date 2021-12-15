@@ -63,7 +63,7 @@ exports.getDespatch=(dbModel,ioType,integrator,listItem,callback)=>{
 function syncDespatches(dbModel,ioType,integrator,srvcName,callback){
 	var logPrefix=`${dbModel.nameLog} ${srvcName.green}, sync`
 	var limit=0
-	if(config.status=='development'){
+	if(config.status!='release'){
 		limit=3
 	}
 	eventLog(`${logPrefix} started `)
@@ -108,7 +108,7 @@ function syncDespatchList(dbModel,ioType,integrator,srvcName, callback){
 					data.value.items.forEach((e)=>{ e._integratorId=integrator._id })
 					iteration(data.value.items,(item,cb)=>{ insertTempTable(dbModel,ioType,item,cb)},0,false,(err)=>{
 						if(dberr(err,cb)){
-							if(config.status=='development'){
+							if(config.status!='release'){
 								if(data.value.attr.pageIndex<data.value.attr.totalPages-1 && data.value.attr.pageIndex<2 ){
 									query.PageIndex++
 									setTimeout(indir,downloadInterval,cb)
@@ -243,7 +243,7 @@ function insertTempTable(dbModel,ioType,item,callback){
 
 function defaultStartDate(){
 
-	if(config.status=='development'){
+	if(config.status!='release'){
 		return (new Date((new Date()).getFullYear(),(new Date()).getMonth(),(new Date()).getDate(),0,0,0)).addDays(-10).toISOString()
 	}else{
 		return (new Date((new Date()).getFullYear(),0,1,0,0,0)).toISOString()
@@ -334,7 +334,7 @@ exports.sendToGib=(dbModel,despatchDoc,cb)=>{
 				if(dbnull(irsaliyeDoc,cb)){
 					exports.getXslt(dbModel,despatchDoc,(err,xsltData)=>{
 						if(!err){
-							if(config.status=='development'){
+							if(config.status!='release'){
 								despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
 								despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
 								despatchDoc.eIntegrator.despatch.username='Uyumsoft'
@@ -393,7 +393,7 @@ exports.sendToGib=(dbModel,despatchDoc,cb)=>{
 
 exports.sendReceiptAdvice=(dbModel,receiptAdviceDoc,cb)=>{
 	try{
-		if(config.status=='development'){
+		if(config.status!='release'){
 			receiptAdviceDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
 			receiptAdviceDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
 			receiptAdviceDoc.eIntegrator.despatch.username='Uyumsoft'
@@ -454,7 +454,7 @@ function queryDespatchStatus(dbModel,despatchDoc,cb){
 			if(dberr(err,cb)){
 				if(dbnull(irsaliyeDoc,cb)){
 
-					if(config.status=='development'){
+					if(config.status!='release'){
 						despatchDoc.eIntegrator.party.partyIdentification[0].ID.value='9000068418'
 						despatchDoc.eIntegrator.despatch.url='https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration'
 						despatchDoc.eIntegrator.despatch.username='Uyumsoft'
@@ -531,7 +531,7 @@ function checkDespatcheStatus(dbModel,srvcName, callback){
 		sort:{'issueDate.value':-1 , 'ID.value':-1}
 	}
 
-	if(config.status=='development'){
+	if(config.status!='release'){
 		baslamaTarihi=(new Date()).addDays(-90).yyyymmdd()
 		options.sort={'issueDate.value':-1 , 'ID.value':-1}
 	}
@@ -554,7 +554,7 @@ function checkDespatcheStatus(dbModel,srvcName, callback){
 			function calistir(cb){
 				if(index>=resp.docs.length)
 					return cb()
-				if(config.status=='development' && index>=5)
+				if(config.status!='release' && index>=5)
 					return cb()
 
 				queryDespatchStatus(dbModel,resp.docs[index],(err,result)=>{

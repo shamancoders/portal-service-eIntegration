@@ -45,7 +45,7 @@ exports.syncInvoiceList=(dbModel,ioType,integrator,callback)=>{
 					data.value.items.forEach((e)=>{ e._integratorId=integrator._id })
 					iteration(data.value.items,(item,cb)=>{ exports.insertTempTable(dbModel,ioType,item,cb)},0,false,(err)=>{
 						if(!err){
-							if(config.status=='development'){
+							if(config.status!='release'){
 								if(data.value.attr.pageIndex<data.value.attr.totalPages-1 && data.value.attr.pageIndex<3 ){
 									query.PageIndex++
 									setTimeout(indir,downloadInterval,cb)
@@ -149,7 +149,7 @@ exports.insertTempTable=(dbModel,ioType,item,callback)=>{
 
 
 function defaultStartDate(){
-	if(config.status=='development'){
+	if(config.status!='release'){
 		return (new Date((new Date()).getFullYear(),6,10,0,0,0)).toISOString()
 	}else{
 		return (new Date((new Date()).getFullYear(),0,1,0,0,0)).toISOString()
