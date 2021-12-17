@@ -15,7 +15,7 @@ var httpServer=require('./lib/http-server.js')
 global.app = express()
 var cors = require('cors')
 app.use(cors())
-var flash = require('connect-flash')
+// var flash = require('connect-flash')
 
 app.use(logger('dev'))
 app.use(bodyParser.json({limit: "100mb"}))
