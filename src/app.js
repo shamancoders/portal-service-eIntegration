@@ -26,9 +26,8 @@ indexRouter(app)
 
 testControllers(false)
 
-app.set('name',require('./package').name)
-app.set('version',require('./package').version)
 app.set('port',config.httpserver.port)
+
 
 module.exports=()=>{
 	httpServer(app,(err,server,port)=>{
@@ -39,6 +38,7 @@ module.exports=()=>{
 				global.eDespatch=require('./eDespatch/services/e-despatch')
 				global.eInvoice=require('./eInvoice/services/e-invoice')
 				eDespatch.start()
+				
 				// eInvoice.start()
 				
 			}else{
