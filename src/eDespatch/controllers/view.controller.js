@@ -6,6 +6,7 @@ module.exports = (dbModel, req, res, next, cb)=>{
 		dbModel.despatches.findOne({_id:req.params.param1}).populate('eIntegrator').exec((err,doc)=>{
 			if(dberr(err,next))
 				if(dbnull(doc,next)){
+					
 					eDespatch.xsltView(dbModel,doc,(err,data)=>{
 						if(dberr(err,next)){
 							cb(data)

@@ -1,6 +1,7 @@
 class DespatchIntegration {
 	constructor(url,username,password){
-		this.client=new WcfHelper(url,username,password,'IDespatchIntegration')
+		this.wcf=new WcfHelper(url,username,password,'IDespatchIntegration')
+
 	}
 
 	/* string[] despatchesIds */
@@ -221,10 +222,17 @@ class DespatchIntegration {
 	}
 
 	run(funcName,parameters,callback){
-		this.client.send(funcName,parameters,(err,data)=>{
+		this.wcf.createClient((err,client)=>{
 			if(!err){
-				var obj=util.renameInvoiceObjects(data[`${funcName}Response`][`${funcName}Result`],util.renameKey)
-				this.isSucceed(obj,callback)
+				client[funcName](parameters,(err,data)=>{
+					if(!err){
+						var obj=util.renameInvoiceObjects(data[`${funcName}Response`][`${funcName}Result`],util.renameKey)
+						this.isSucceed(obj,callback)
+					}else{
+						callback(err)
+					}
+				})
+
 			}else{
 				callback(err)
 			}
