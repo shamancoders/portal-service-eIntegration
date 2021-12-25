@@ -35,7 +35,7 @@ function send(dbModel,req,res,next,cb){
 	filter['localStatus']={$ne:'pending'}
 	dbModel.despatches.updateMany(filter,{$set:{localStatus:'pending'}},{multi:false},(err,c)=>{
 		if(dberr(err,next)){
-			cb(`${c.nModified} adet evrak kuyruga eklendi`)
+			cb(`${c.modifiedCount} adet evrak kuyruga eklendi`)
 		}
 	})
 }
