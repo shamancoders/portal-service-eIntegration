@@ -1,5 +1,4 @@
 // var SinifGrubu = require('./uyumsoft/DespatchIntegration.class.js')
-var despatchHelper = require('./despatch-hepler.js')
 let downloadInterval = config.downloadInterval || 5000
 
 let serviceName = `eDespatch`
@@ -13,17 +12,29 @@ exports.getDespatch = (dbModel, ioType, client, integrator, listItem, callback) 
 	dbModel.despatches.findOne({ ioType: ioType, eIntegrator: listItem.docId2, 'uuid.value': listItem.docId }, (err, doc) => {
 		if(dberr(err, callback)) {
 			if(doc == null) {
-				let func = `Get${ioBox(ioType)}Despatch`
+				let resField = ''
+				let GetDespatch = (query, cb) => {
+					if(ioType == 0) {
+						resField = 'GetOutboxDespatchResult'
+						client.GetOutboxDespatch(query, cb)
 
-				client[func]({ despatchId: listItem.docId }, (err, resp, rawResponse, soapHeader, rawRequest) => {
-					//soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, doc.ID.value, doc.ioType)
-
+					} else {
+						resField = 'GetInboxDespatchResult'
+						client.GetInboxDespatch(query, cb)
+					}
+				}
+				GetDespatch({ despatchId: listItem.docId }, (err, resp, rawResponse, soapHeader, rawRequest) => {
+					tempLog(`getDespatch_${ioBox(ioType)}_rawRequest_${listItem.docId}.xml`, rawRequest)
+					tempLog(`getDespatch_${ioBox(ioType)}_rawResponse_${listItem.docId}.xml`, rawResponse)
+					tempLog(`getDespatch_${ioBox(ioType)}_soapHeader_${listItem.docId}.json`, JSON.stringify(soapHeader, null, 2))
+					tempLog(`getDespatch_${ioBox(ioType)}_resp_${listItem.docId}.json`, JSON.stringify(resp || {}, null, 2))
 					if(dberr(err, callback)) {
-						let data = convertSoapObject(resp[`${func}Result`])
-						if(!data.attr.isSucceded)
-							return cb({ code: func, message: data.attr.message })
+						let data = resp[resField]
+						data = convertSoapObject(data, (d) => despatchAdvice.toISOString().substr(0, 10))
+						data = convertAttrNumber(data)
+						if(data.attr.isSucceded == 'false') return cb({ code: 'getDespatch', message: data.attr.message })
 
-						let obj = convertSoapObject(data.value.despatchAdvice)
+						let obj = convertSoapObject(data.value.despatchAdvice, (d) => d.toISOString().substr(0, 10))
 						let newDoc = new dbModel.despatches(obj)
 						newDoc.eIntegrator = integrator._id
 						newDoc.ioType = ioType
@@ -64,10 +75,10 @@ exports.getDespatch = (dbModel, ioType, client, integrator, listItem, callback) 
 }
 
 function syncDespatches(dbModel, ioType, integrator, srvcName, callback) {
-	let logPrefix = `${dbModel.nameLog} ${srvcName.green}, syncDespatches`
+	let logPrefix = `${dbModel.nameLog} ${srvcName.green}, sync`
 	let limit = 0
 	if(config.status != 'release') {
-		limit = 50
+		limit = 3
 	}
 	eventLog(`${logPrefix} started `)
 	createClient(integrator, (err, client) => {
@@ -92,25 +103,52 @@ function syncDespatches(dbModel, ioType, integrator, srvcName, callback) {
 }
 
 
+function convertAttrNumber(data) {
+	if(data.value == undefined) return data
+	if(data.value.attr == undefined) return data
+
+	if(data.value.attr.pageIndex != undefined) data.value.attr.pageIndex = Number(data.value.attr.pageIndex)
+	if(data.value.attr.totalPages != undefined) data.value.attr.totalPages = Number(data.value.attr.totalPages)
+	if(data.value.attr.pageSize != undefined) data.value.attr.pageSize = Number(data.value.attr.pageSize)
+	if(data.value.attr.totalCount != undefined) data.value.attr.totalCount = Number(data.value.attr.totalCount)
+
+	return data
+}
 
 function syncDespatchList(dbModel, ioType, integrator, srvcName, callback) {
 	let logPrefix = `${dbModel.nameLog} ${srvcName.green}, syncList`
 	createClient(integrator, (err, client) => {
 		if(!err) {
 			syncDespatchList_queryModel(dbModel, ioType, integrator, (err, query) => {
-				let func = `Get${ioBox(ioType)}DespatchList`
+				let resField = ''
+				let GetDespatchList = (query, cb) => {
+					if(ioType == 0) {
+						client.GetOutboxDespatchList(query, cb)
+						resField = 'GetOutboxDespatchListResult'
+					} else {
+						client.GetInboxDespatchList(query, cb)
+						resField = 'GetInboxDespatchListResult'
+					}
+				}
+
+				console.log(`syncDespatchList query:`, query)
+
 				function indir(cb) {
-					client[func]({ query: query }, (err, resp, rawResponse, soapHeader, rawRequest) => {
-						//soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, 'now', -1)
+					GetDespatchList({ query: query }, (err, resp, rawResponse, soapHeader, rawRequest) => {
+						tempLog(`syncDespatchList_${ioBox(ioType)}_rawRequest_${(new Date()).yyyymmdd()}.xml`, rawRequest)
+						tempLog(`syncDespatchList_${ioBox(ioType)}_rawResponse_${(new Date()).yyyymmdd()}.xml`, rawResponse)
+						tempLog(`syncDespatchList_${ioBox(ioType)}_soapHeader_${(new Date()).yyyymmdd()}.json`, JSON.stringify(soapHeader, null, 2))
+						tempLog(`syncDespatchList_${ioBox(ioType)}_resp_${(new Date()).yyyymmdd()}.json`, JSON.stringify(resp || {}, null, 2))
 
 						if(dberr(err, cb)) {
-							let data = convertSoapObject(resp[`${func}Result`])
-
-							if(!data.attr.isSucceded)
-								return cb({ code: `sync${ioBox(ioType)}DespatchList`, message: data.attr.message })
-							if(data.value.attr.totalPages == 0)
-								return cb(null)
-
+							let data = resp[resField]
+							console.log(`data1:`, data)
+							data = convertSoapObject(data)
+							console.log(`data2:`, data)
+							data = convertAttrNumber(data)
+							console.log(`data3:`, data)
+							if(data.attr.isSucceded == 'false') return cb({ code: 'syncDespatchList', message: data.attr.message })
+							if(data.value.attr.totalPages == 0) return cb(null)
 							eventLog(`${logPrefix} page:${data.value.attr.pageIndex+1}/${data.value.attr.totalPages}`)
 							if(!Array.isArray(data.value.items)) {
 								data.value.items = [clone(data.value.items)]
@@ -163,12 +201,12 @@ function syncDespatchList_queryModel(dbModel, ioType, integrator, cb) {
 		CreateEndDate: endDate()
 	}
 
+
 	dbModel.temp_table.find({ docType: `eDespatch_sync${ioBox(ioType)}List` }).sort({ orderBy: -1 }).limit(1).exec((err, docs) => {
 		if(!err) {
 			if(docs.length > 0) {
 				let tarih = new Date(docs[0].document['createDateUtc'])
 				tarih.setMinutes(tarih.getMinutes() + (new Date()).getTimezoneOffset() * -1)
-
 				query.CreateStartDate = tarih.toISOString()
 
 				cb(null, query)
@@ -183,13 +221,14 @@ function syncDespatchList_queryModel(dbModel, ioType, integrator, cb) {
 
 
 function downloadDespatches(dbModel, ioType, srvcName, callback) {
-	let logPrefix = `${dbModel.nameLog} ${srvcName.green} downloadDespatches`
+	let logPrefix = `${dbModel.nameLog} ${srvcName.green}`
 	dbModel.integrators.find({ passive: false }, (err, docs) => {
 		if(dberr(err, callback)) {
 			let integrators = []
 			docs.forEach((e) => {
 				if(e.despatch.url != '' && e.despatch.username != '' && e.despatch.password != '') {
 					let itg = e.toJSON()
+					//itg['despatchIntegration'] = new SinifGrubu.DespatchIntegration(itg.despatch.url, itg.despatch.username, itg.despatch.password)
 					integrators.push(itg)
 				}
 			})
@@ -204,9 +243,9 @@ function downloadDespatches(dbModel, ioType, srvcName, callback) {
 				})
 			}, 0, false, (err, result) => {
 				if(err) {
-					errorLog(`${logPrefix}, error:`, err)
+					errorLog(`${logPrefix}, syncList error:`, err)
 				} else {
-					eventLog(`${logPrefix}, OK`)
+					eventLog(`${logPrefix}, syncList OK`)
 				}
 				if(callback) callback()
 			})
@@ -278,7 +317,7 @@ exports.xsltView = (dbModel, despatchDoc, callback) => {
 					if(!err) {
 						let data = resp[resField]
 						data = convertSoapObject(data)
-						if(!data.attr.isSucceded) return callback({ code: 'xsltView', message: data.attr.message })
+						if(data.attr.isSucceded == 'false') return callback({ code: 'xsltView', message: data.attr.message })
 						callback(null, data.value.html)
 					} else {
 						callback(err)
@@ -325,6 +364,154 @@ exports.getXslt = (dbModel, despatchDoc, cb) => {
 
 
 
+function queryDespatchStatus(dbModel, despatchDoc, cb) {
+	try {
+		if(!despatchDoc.eIntegrator)
+			return cb(null)
+		dbModel.despatches.findOne({ _id: despatchDoc._id }, (err, irsaliyeDoc) => {
+			if(dberr(err, cb)) {
+				if(dbnull(irsaliyeDoc, cb)) {
+
+					if(config.status != 'release') {
+						despatchDoc.eIntegrator.party.partyIdentification[0].ID.value = '9000068418'
+						despatchDoc.eIntegrator.despatch.url = 'https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration?wsdl'
+						despatchDoc.eIntegrator.despatch.username = 'Uyumsoft'
+						despatchDoc.eIntegrator.despatch.password = 'Uyumsoft'
+					}
+					createClient(despatchDoc.eIntegrator, (err, client) => {
+						if(dberr(err, cb)) {
+							let resField = ''
+							let QueryDespatchStatus = (despatchIds, cb) => {
+								if(despatchDoc.ioType == 0) {
+									resField = 'GetOutboxDespatchStatusWithLogsResult'
+									client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
+									// client.QueryOutboxDespatchStatus(despatchIds, cb)
+								} else {
+									resField = 'GetInboxDespatchStatusWithLogsResult'
+									client.GetInboxDespatchStatusWithLogs(despatchIds, cb)
+								}
+							}
+							let GetDespatchList = (query, cb) => {
+								if(despatchDoc.ioType == 0) {
+									return client.QueryOutboxDespatchStatus(query, cb)
+								} else {
+									return client.QueryInboxDespatchStatus(query, cb)
+								}
+							}
+
+							let query = {
+								attr: {
+									PageIndex: 0,
+									PageSize: 10
+								},
+								DespatchIds: [despatchDoc.uuid.value]
+							}
+							GetDespatchList(query, (err, data) => {
+								if(dberr(err, cb)) {
+									data = convertSoapObject(data)
+									data = convertAttrNumber(data)
+
+									if(!data.value) return cb(null)
+									if(!data.value.items) return cb(null)
+
+									if(!Array.isArray(data.value.items))
+										data.value.items = [clone(data.value.items)]
+
+									let obj = {
+										_id: despatchDoc._id,
+										uuid: data.value.items[0].despatchId,
+										ID: data.value.items[0].despatchNumber,
+										title: data.value.items[0].targetTitle,
+										vknTckn: data.value.items[0].targetTcknVkn,
+										despatchStatus: data.value.items[0].statusEnum
+									}
+									tempLog(`${despatchDoc.ID.value}_queryDespatchStatus.json`, JSON.stringify(data, null, 2))
+									if(despatchDoc.despatchStatus != data.value.items[0].statusEnum) {
+
+										irsaliyeDoc.despatchStatus = data.value.items[0].statusEnum
+
+										if(irsaliyeDoc.despatchStatus != 'Error') {
+											irsaliyeDoc.despatchErrors = []
+										}
+
+										irsaliyeDoc.save(() => {
+											cb(null, obj)
+										})
+									} else {
+										cb(null, obj)
+									}
+								}
+							})
+						}
+					})
+				}
+			}
+		})
+	} catch (e) {
+		cb(e)
+	}
+}
+
+function checkDespatcheStatus(dbModel, srvcName, callback) {
+	let logPrefix = `${dbModel.nameLog} ${srvcName.green}`
+	let baslamaTarihi = (new Date()).addDays(-15).yyyymmdd()
+
+	let options = {
+		page: 1,
+		limit: 50,
+		populate: [
+			{ path: 'eIntegrator', select: '_id eIntegrator despatch party' }
+		],
+
+		select: '_id ioType eIntegrator ID uuid issueDate issueTime despatchStatus',
+		sort: { 'issueDate.value': -1, 'ID.value': -1 }
+	}
+
+	if(config.status != 'release') {
+		baslamaTarihi = (new Date()).addDays(-180).yyyymmdd()
+		options.sort = { 'issueDate.value': -1, 'ID.value': -1 }
+	}
+
+	let filter = {
+		ioType: 0,
+		despatchStatus: { $nin: ['Approved', 'PartialApproved', 'Declined', 'Canceled', 'Cancelled'] },
+		'issueDate.value': { $gte: baslamaTarihi }
+	}
+
+	console.log(`filter:`, filter)
+
+	dbModel.despatches.paginate(filter, options, (err, resp) => {
+		if(dberr(err, callback)) {
+
+
+			eventLog(`${logPrefix}, count:${resp.docs.length}`)
+			tempLog(`checkDespatcheStatus.dbModel.despatches.paginate.json`, JSON.stringify(resp.docs, null, 2))
+
+			let index = 0
+
+			function calistir(cb) {
+				if(index >= resp.docs.length)
+					return cb()
+				if(config.status != 'release' && index >= 5)
+					return cb()
+
+				queryDespatchStatus(dbModel, resp.docs[index], (err, result) => {
+					if(err) {
+						errorLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length} ${resp.docs[index].ID.value}  error:`, err)
+					} else {
+						eventLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length}`)
+					}
+					index++
+					setTimeout(calistir, 10, cb)
+				})
+			}
+
+			calistir(() => {
+				if(callback) callback(err)
+			})
+		}
+	})
+}
 
 function task_sentToGib(dbModel, srvcName, callback) {
 	let logPrefix = `${dbModel.nameLog} ${srvcName.green}`
@@ -362,7 +549,7 @@ function task_sentToGib(dbModel, srvcName, callback) {
 }
 
 function defaultStartDate() {
-	return (new Date()).addDays(-120).toISOString()
+	return (new Date((new Date()).getFullYear(), 11, 1, 0, 0, 0)).toISOString()
 }
 
 function endDate() {
@@ -371,6 +558,8 @@ function endDate() {
 	return a.toISOString()
 }
 
+
+var despatchHelper = require('./despatch-hepler.js')
 
 function sendDespatchToGib(dbModel, despatchDoc, cb) {
 	try {
@@ -390,13 +579,20 @@ function sendDespatchToGib(dbModel, despatchDoc, cb) {
 
 
 						client.SendDespatch({ despatches: [{ DespatchInfo: despatchInfo }] }, (err, resp, rawResponse, soapHeader, rawRequest) => {
-							soapLog(err, resp, rawResponse, soapHeader, rawRequest, 'sendDespatchToGib', despatchDoc.ID.value, despatchDoc.ioType)
 
 							if(!err) {
-								let data = convertSoapObject(resp.SendDespatchResult)
-								if(!data.attr.isSucceded)
-									return cb({ code: 'sendToGib', message: `db:${dbModel.dbName} ${data.attr.message}` })
+								tempLog(`sendDespatchToGib_rawRequest_${despatchDoc.ID.value}.xml`, rawRequest)
+								tempLog(`sendDespatchToGib_rawResponse_${despatchDoc.ID.value}.xml`, rawResponse)
+								tempLog(`sendDespatchToGib_soapHeader_${despatchDoc.ID.value}.json`, JSON.stringify(soapHeader, null, 2))
+								tempLog(`sendDespatchToGib_resp_${despatchDoc.ID.value}.json`, JSON.stringify(resp || {}, null, 2))
 
+								let data = convertSoapObject(resp.SendDespatchResult)
+
+								console.log(`data:`, data)
+								if(data.attr.isSucceded == 'false') {
+									return cb({ code: 'sendToGib', message: `db:${dbModel.dbName} ${data.attr.message}` })
+								}
+								console.log(`data.value:`, data.value)
 								despatchDoc.despatchStatus = 'Queued'
 								despatchDoc.localStatus = 'transferred'
 								despatchDoc.localErrors = []
@@ -411,6 +607,8 @@ function sendDespatchToGib(dbModel, despatchDoc, cb) {
 								})
 
 							} else {
+								tempLog(`sendDespatchToGib_response_err_${despatchDoc.ID.value}.xml`, err.response.config.data)
+								errorLog(`${serviceName}  sendToGib Hata ${despatchDoc.ID.value}:`, err)
 								despatchDoc.despatchStatus = 'Error'
 								despatchDoc.localStatus = 'transferred'
 								despatchDoc.localErrors = []
@@ -433,7 +631,6 @@ function sendDespatchToGib(dbModel, despatchDoc, cb) {
 
 
 
-
 exports.logs = (dbModel, despatchDoc, callback) => {
 	if(config.status != 'release') {
 		despatchDoc.eIntegrator.party.partyIdentification[0].ID.value = '9000068418'
@@ -443,17 +640,38 @@ exports.logs = (dbModel, despatchDoc, callback) => {
 	}
 	createClient(despatchDoc.eIntegrator, (err, client) => {
 		if(!err) {
-			let func = `Get${ioBox(despatchDoc.ioType)}DespatchStatusWithLogs`
-			client[func]({ despatchIds: [{ 'string': despatchDoc.uuid.value }] }, (err, resp, rawResponse, soapHeader, rawRequest) => {
-				soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, despatchDoc.ID.value, despatchDoc.ioType)
+			let resField = ''
+			let GetDespatchStatusWithLogs = (despatchIds, cb) => {
+				if(despatchDoc.ioType == 0) {
+					resField = 'GetOutboxDespatchStatusWithLogsResult'
+					client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
+					// client.QueryOutboxDespatchStatus(despatchIds, cb)
+				} else {
+					resField = 'GetInboxDespatchStatusWithLogsResult'
+					client.GetInboxDespatchStatusWithLogs(despatchIds, cb)
+				}
+			}
+
+			console.log(`despatchDoc.uuid.value:`, despatchDoc.uuid.value)
+
+			// GetDespatchStatusWithLogs({ despatchIds: {despatchId:despatchDoc.uuid.value.toString()} }, (err, resp, rawResponse, soapHeader, rawRequest) => {
+			
+			GetDespatchStatusWithLogs({despatchIds: [{'string':despatchDoc.uuid.value}]}, (err, resp, rawResponse, soapHeader, rawRequest) => {
 				if(!err) {
-					let data = convertSoapObject(resp[`${func}Result`])
-					if(!data.attr.isSucceded)
-						return callback({ code: 'logs', message: data.attr.message })
+					tempLog(`logs_rawRequest_${despatchDoc.ID.value}.xml`, rawRequest)
+					tempLog(`logs_rawResponse_${despatchDoc.ID.value}.xml`, rawResponse)
+					tempLog(`logs_soapHeader_${despatchDoc.ID.value}.json`, JSON.stringify(soapHeader, null, 2))
+					tempLog(`logs_resp_${despatchDoc.ID.value}.json`, JSON.stringify(resp || {}, null, 2))
+
+					let data = convertSoapObject(resp[resField])
+
+					console.log(`logs data:`, data)
+					if(data.attr.isSucceded == 'false') return callback({ code: 'logs', message: data.attr.message })
 
 					callback(null, data.value[0])
 				} else {
-					
+					tempLog(`logs_response_err_${despatchDoc.ID.value}.xml`, err.response.config.data)
+					errorLog(`${serviceName}  logs Hata ${despatchDoc.ID.value}:`, err)
 					callback(err)
 				}
 
@@ -471,6 +689,16 @@ function createClient(integrator, cb) {
 		valueKey: 'value',
 		attributesKey: 'attr',
 		useEmptyTag: true,
+		// overrideRootElement: {
+		// 	namespace: 'xmlns:tns',
+		// 	xmlnsAttributes: [{
+		// 		name: 'xmlns:ns2',
+		// 		value: "http://tempuri.org/"
+		// 	}, {
+		// 		name: 'xmlns:ns3',
+		// 		value: "http://sillypets.com/xsd"
+		// 	}]
+		// }
 	}
 
 	let url = integrator.despatch.url
@@ -490,10 +718,9 @@ function createClient(integrator, cb) {
 }
 
 
-
 function convertSoapObject(obj, dateConvertor) {
 	let obj2 = util.renameObjectProperty(obj, propertyNameChanger)
-	obj2=convertAttrNumber(obj2)
+	console.log(`obj2:`, obj2)
 
 	let obj3 = addValueField('', obj2, 'attr', 'value')
 
@@ -566,277 +793,41 @@ function convertSoapObject(obj, dateConvertor) {
 		}
 		return key
 	}
-
-	function convertAttrNumber(data) {
-		if(data.attr!=undefined){
-			if(data.attr.isSucceded!=undefined){
-				data.attr.isSucceded=data.attr.isSucceded=='true'?true:false
-			}
-		}
-		if(data.value == undefined) return data
-		if(data.value.attr == undefined) return data
-
-		if(data.value.attr.pageIndex != undefined) data.value.attr.pageIndex = Number(data.value.attr.pageIndex)
-		if(data.value.attr.totalPages != undefined) data.value.attr.totalPages = Number(data.value.attr.totalPages)
-		if(data.value.attr.pageSize != undefined) data.value.attr.pageSize = Number(data.value.attr.pageSize)
-		if(data.value.attr.totalCount != undefined) data.value.attr.totalCount = Number(data.value.attr.totalCount)
-
-		return data
-	}
-
 }
 
-
-
-function queryDespatchStatus(dbModel, ioType, integrator, srvcName, cb) {
-	try {
-		if(config.status != 'release') {
-			integrator.party.partyIdentification[0].ID.value = '9000068418'
-			integrator.despatch.url = 'https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration?wsdl'
-			integrator.despatch.username = 'Uyumsoft'
-			integrator.despatch.password = 'Uyumsoft'
-		}
-		createClient(despatchDoc.eIntegrator, (err, client) => {
-			if(dberr(err, cb)) {
-				// let resField = ''
-				// let QueryDespatchStatus = (despatchIds, cb) => {
-				// 	if(despatchDoc.ioType == 0) {
-				// 		resField = 'QueryOutboxDespatchStatusResult'
-				// 		client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
-				// 	} else {
-				// 		resField = 'QueryInboxDespatchStatusResult'
-				// 		client.QueryInboxDespatchStatus(despatchIds, cb)
-				// 	}
-				// }
-			}
-		})
-		dbModel.despatches.findOne({ _id: despatchDoc._id }, (err, irsaliyeDoc) => {
-			if(dberr(err, cb)) {
-				if(dbnull(irsaliyeDoc, cb)) {
-
-
-					createClient(despatchDoc.eIntegrator, (err, client) => {
-						if(dberr(err, cb)) {
-							let resField = ''
-							let QueryDespatchStatus = (despatchIds, cb) => {
-								if(despatchDoc.ioType == 0) {
-									resField = 'QueryOutboxDespatchStatusResult'
-									client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
-									// client.QueryOutboxDespatchStatus(despatchIds, cb)
-								} else {
-									resField = 'QueryInboxDespatchStatusResult'
-									client.QueryInboxDespatchStatus(despatchIds, cb)
-								}
-							}
-
-
-							let query = {
-								attr: {
-									PageIndex: 0,
-									PageSize: 10
-								},
-								DespatchIds: [despatchDoc.uuid.value]
-							}
-							GetDespatchList(query, (err, data) => {
-								if(dberr(err, cb)) {
-									data = convertSoapObject(data)
-									data = convertAttrNumber(data)
-
-									if(!data.value) return cb(null)
-									if(!data.value.items) return cb(null)
-
-									if(!Array.isArray(data.value.items))
-										data.value.items = [clone(data.value.items)]
-
-									let obj = {
-										_id: despatchDoc._id,
-										uuid: data.value.items[0].despatchId,
-										ID: data.value.items[0].despatchNumber,
-										title: data.value.items[0].targetTitle,
-										vknTckn: data.value.items[0].targetTcknVkn,
-										despatchStatus: data.value.items[0].statusEnum
-									}
-									tempLog(`${despatchDoc.ID.value}_queryDespatchStatus.json`, JSON.stringify(data, null, 2))
-									if(despatchDoc.despatchStatus != data.value.items[0].statusEnum) {
-
-										irsaliyeDoc.despatchStatus = data.value.items[0].statusEnum
-
-										if(irsaliyeDoc.despatchStatus != 'Error') {
-											irsaliyeDoc.despatchErrors = []
-										}
-
-										irsaliyeDoc.save(() => {
-											cb(null, obj)
-										})
-									} else {
-										cb(null, obj)
-									}
-								}
-							})
-						}
-					})
-				}
-			}
-		})
-	} catch (e) {
-		cb(e)
-	}
-}
-
-function checkDespatchStatus(dbModel, ioType, srvcName, callback) {
-	let logPrefix = `${dbModel.nameLog} ${srvcName.green} checkStatus`
-	dbModel.integrators.find({ passive: false }, (err, docs) => {
-		if(dberr(err, callback)) {
-			let integrators = []
-			docs.forEach((e) => {
-				if(e.despatch.url != '' && e.despatch.username != '' && e.despatch.password != '') {
-					let itg = e.toJSON()
-					integrators.push(itg)
-				}
-			})
-
-			iteration(integrators, (integrator, cb) => {
-				queryDespatchStatus(dbModel, ioType, integrator, srvcName, cb)
-			}, 0, false, (err, result) => {
-				if(err) {
-					errorLog(`${logPrefix}, error:`, err)
-				} else {
-					eventLog(`${logPrefix}, OK`)
-				}
-				if(callback) callback()
-			})
-		}
-	})
-}
-
-function checkDespatcheStatus111(dbModel, srvcName, callback) {
-	let logPrefix = `${dbModel.nameLog} ${srvcName.green}`
-	let baslamaTarihi = (new Date()).addDays(-15).yyyymmdd()
-
-	let options = {
-		page: 1,
-		limit: 50,
-		populate: [
-			{ path: 'eIntegrator', select: '_id eIntegrator despatch party' }
-		],
-
-		select: '_id ioType eIntegrator ID uuid issueDate issueTime despatchStatus',
-		sort: { 'issueDate.value': -1, 'ID.value': -1 }
-	}
-
-	if(config.status != 'release') {
-		baslamaTarihi = (new Date()).addDays(-180).yyyymmdd()
-		options.sort = { 'issueDate.value': -1, 'ID.value': -1 }
-	}
-
-	let filter = {
-		ioType: 0,
-		despatchStatus: { $nin: ['Approved', 'PartialApproved', 'Declined', 'Canceled', 'Cancelled'] },
-		'issueDate.value': { $gte: baslamaTarihi }
-	}
-
-	console.log(`filter:`, filter)
-
-	dbModel.despatches.paginate(filter, options, (err, resp) => {
-		if(dberr(err, callback)) {
-
-
-			eventLog(`${logPrefix}, count:${resp.docs.length}`)
-			tempLog(`checkDespatcheStatus.dbModel.despatches.paginate.json`, JSON.stringify(resp.docs, null, 2))
-
-			let index = 0
-
-			function calistir(cb) {
-				if(index >= resp.docs.length)
-					return cb()
-				if(config.status != 'release' && index >= 5)
-					return cb()
-
-				queryDespatchStatus(dbModel, resp.docs[index], (err, result) => {
-					if(err) {
-						errorLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length} ${resp.docs[index].ID.value}  error:`, err)
-					} else {
-						eventLog(`${logPrefix}, checking:${(index+1)}/${resp.docs.length}`)
-					}
-					index++
-					setTimeout(calistir, 10, cb)
-				})
-			}
-
-			calistir(() => {
-				if(callback) callback(err)
-			})
-		}
-	})
-}
-
-function soapLog(err, resp, rawResponse, soapHeader, rawRequest, funcName='soapLog', docId='now', ioType=-1){
-
-	let box=''
-
-	if(ioType>-1)
-		box=`${ioBox(ioType)}_`
-	if(docId=='now'){
-		docId=(new Date()).yyyymmddhhmmss('_').replaceAll(':','')
-	}else if(docId=='today'){
-		docId=(new Date()).yyyymmdd()
-	}
-	if(docId!='')
-		docId='_' + docId
-
-	if(!err){
-		// tempLog(`${funcName}_${box}rawRequest${docId}.xml`, rawRequest)
-		// tempLog(`${funcName}_${box}rawResponse${docId}.xml`, rawResponse)
-		// tempLog(`${funcName}_${box}soapHeader${docId}.json`, JSON.stringify(soapHeader, null, 2))
-		// tempLog(`${funcName}_${box}resp${docId}.json`, JSON.stringify(resp || {}, null, 2))
-		// tempLog(`${funcName}_${box}response_err${docId}.xml`, 'hata yok')
-	}else{
-		tempLog(`${funcName}_${box}response_err${docId}.xml`, err.response.config.data)
-		errorLog(`${funcName}_${box}response err${docId} :`, err)
-	}
-
-}
 
 exports.start = () => {
 
-	runServiceOnAllUserDb({
-		filter: { 'services.eIntegration.eDespatch': true },
-		serviceFunc: (dbModel, cb) => { downloadDespatches(dbModel, 0, `eDespatch/${'download'.cyan}/outbox`, cb) },
-		name: 'eDespatch/download/outbox',
-		repeatInterval: config.repeatInterval || 60000
-	})
-
-	runServiceOnAllUserDb({
-		filter: { 'services.eIntegration.eDespatch': true },
-		serviceFunc: (dbModel, cb) => { downloadDespatches(dbModel, 1, `eDespatch/${'download'.brightCyan}/inbox`, cb) },
-		name: 'eDespatch/download/inbox',
-		repeatInterval: config.repeatInterval || 60000
-	})
+	// runServiceOnAllUserDb({
+	// 	filter:{'services.eIntegration.eDespatch':true},
+	// 	serviceFunc:(dbModel,cb)=>{ downloadDespatches(dbModel,0,`eDespatch/${'download'.cyan}/outbox`,cb) },
+	// 	name:'eDespatch/download/outbox',
+	// 	repeatInterval:10000 //config.repeatInterval || 60000
+	// })
 
 	// runServiceOnAllUserDb({
 	// 	filter: { 'services.eIntegration.eDespatch': true },
-	// 	serviceFunc: (dbModel, cb) => { checkDespatchStatus(dbModel, 0, `eDespatch/${'checkStatus'.cyan}/outbox`, cb) },
-	// 	name: 'eDespatch/checkStatus/outbox',
+	// 	serviceFunc: (dbModel, cb) => { downloadDespatches(dbModel, 1, `eDespatch/${'download'.zebra}/inbox`, cb) },
+	// 	name: 'eDespatch/download/inbox',
 	// 	repeatInterval: 3000 //config.repeatInterval || 60000
 	// })
 
 	// runServiceOnAllUserDb({
 	// 	filter:{'services.eIntegration.eDespatch':true},
-	// 	serviceFunc:(dbModel,cb)=>{ checkDespatchStatus(dbModel,1, `eDespatch/${'checkStatus'.zebra}/inbox`,cb) },
-	// 	name:'eDespatch/checkStatus/inbox',
+	// 	serviceFunc:(dbModel,cb)=>{ checkDespatcheStatus(dbModel,`eDespatch/${'checkStatus'.cyan}`,cb) },
+	// 	name:'eDespatch/checkStatus',
 	// 	repeatInterval:3000 //config.repeatInterval || 60000
 	// })
 
 
-
-	runServiceOnAllUserDb({
-		filter: { 'services.eIntegration.eDespatch': true },
-		serviceFunc: (dbModel, cb) => {
-			task_sentToGib(dbModel, `eDespatch/${'task'.cyan}/sentToGib`, cb)
-		},
-		name: 'eDespatch/task/sentToGib',
-		repeatInterval: 3000 //config.repeatInterval || 60000
-	})
+	// runServiceOnAllUserDb({
+	// 	filter: { 'services.eIntegration.eDespatch': true },
+	// 	serviceFunc: (dbModel, cb) => {
+	// 		task_sentToGib(dbModel, `eDespatch/${'task'.cyan}/sentToGib`, cb)
+	// 	},
+	// 	name: 'eDespatch/task/sentToGib',
+	// 	repeatInterval: 3000 //config.repeatInterval || 60000
+	// })
 
 	// runServiceOnAllUserDb({
 	// 	filter:{'services.eIntegration.eDespatch':true},
@@ -846,4 +837,7 @@ exports.start = () => {
 	// 	name:'eDespatch/task/sendReceiptAdvice',
 	// 	repeatInterval:config.repeatInterval || 60000
 	// })
+
+
+
 }
