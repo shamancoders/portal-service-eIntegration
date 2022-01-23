@@ -813,19 +813,19 @@ exports.start = () => {
 		repeatInterval: config.repeatInterval || 60000
 	})
 
-	// runServiceOnAllUserDb({
-	// 	filter: { 'services.eIntegration.eDespatch': true },
-	// 	serviceFunc: (dbModel, cb) => { checkDespatchStatus(dbModel, 0, `eDespatch/${'checkStatus'.cyan}/outbox`, cb) },
-	// 	name: 'eDespatch/checkStatus/outbox',
-	// 	repeatInterval: 3000 //config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter: { 'services.eIntegration.eDespatch': true },
+		serviceFunc: (dbModel, cb) => { checkDespatchStatus(dbModel, 0, `eDespatch/${'checkStatus'.cyan}/outbox`, cb) },
+		name: 'eDespatch/checkStatus/outbox',
+		repeatInterval: 3000 //config.repeatInterval || 60000
+	})
 
-	// runServiceOnAllUserDb({
-	// 	filter:{'services.eIntegration.eDespatch':true},
-	// 	serviceFunc:(dbModel,cb)=>{ checkDespatchStatus(dbModel,1, `eDespatch/${'checkStatus'.zebra}/inbox`,cb) },
-	// 	name:'eDespatch/checkStatus/inbox',
-	// 	repeatInterval:3000 //config.repeatInterval || 60000
-	// })
+	runServiceOnAllUserDb({
+		filter:{'services.eIntegration.eDespatch':true},
+		serviceFunc:(dbModel,cb)=>{ checkDespatchStatus(dbModel,1, `eDespatch/${'checkStatus'.zebra}/inbox`,cb) },
+		name:'eDespatch/checkStatus/inbox',
+		repeatInterval:3000 //config.repeatInterval || 60000
+	})
 
 
 
