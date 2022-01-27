@@ -99,6 +99,7 @@ function syncDespatchList(dbModel, ioType, integrator, srvcName, callback) {
 		if(!err) {
 			syncDespatchList_queryModel(dbModel, ioType, integrator, (err, query) => {
 				let func = `Get${ioBox(ioType)}DespatchList`
+
 				function indir(cb) {
 					client[func]({ query: query }, (err, resp, rawResponse, soapHeader, rawRequest) => {
 						//soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, 'now', -1)
@@ -445,7 +446,7 @@ exports.logs = (dbModel, despatchDoc, callback) => {
 		if(!err) {
 			let func = `Get${ioBox(despatchDoc.ioType)}DespatchStatusWithLogs`
 			client[func]({ despatchIds: [{ 'string': despatchDoc.uuid.value }] }, (err, resp, rawResponse, soapHeader, rawRequest) => {
-				soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, despatchDoc.ID.value, despatchDoc.ioType)
+				// soapLog(err, resp, rawResponse, soapHeader, rawRequest, func, despatchDoc.ID.value, despatchDoc.ioType)
 				if(!err) {
 					let data = convertSoapObject(resp[`${func}Result`])
 					if(!data.attr.isSucceded)
@@ -453,7 +454,7 @@ exports.logs = (dbModel, despatchDoc, callback) => {
 
 					callback(null, data.value[0])
 				} else {
-					
+
 					callback(err)
 				}
 
@@ -493,7 +494,7 @@ function createClient(integrator, cb) {
 
 function convertSoapObject(obj, dateConvertor) {
 	let obj2 = util.renameObjectProperty(obj, propertyNameChanger)
-	obj2=convertAttrNumber(obj2)
+	obj2 = convertAttrNumber(obj2)
 
 	let obj3 = addValueField('', obj2, 'attr', 'value')
 
@@ -568,9 +569,9 @@ function convertSoapObject(obj, dateConvertor) {
 	}
 
 	function convertAttrNumber(data) {
-		if(data.attr!=undefined){
-			if(data.attr.isSucceded!=undefined){
-				data.attr.isSucceded=data.attr.isSucceded=='true'?true:false
+		if(data.attr != undefined) {
+			if(data.attr.isSucceded != undefined) {
+				data.attr.isSucceded = data.attr.isSucceded == 'true' ? true : false
 			}
 		}
 		if(data.value == undefined) return data
@@ -588,7 +589,7 @@ function convertSoapObject(obj, dateConvertor) {
 
 
 
-function queryDespatchStatus(dbModel, ioType, integrator, srvcName, cb) {
+function queryDespatchStatus(dbModel, ioType, integrator, srvcName, callback) {
 	try {
 		if(config.status != 'release') {
 			integrator.party.partyIdentification[0].ID.value = '9000068418'
@@ -596,90 +597,116 @@ function queryDespatchStatus(dbModel, ioType, integrator, srvcName, cb) {
 			integrator.despatch.username = 'Uyumsoft'
 			integrator.despatch.password = 'Uyumsoft'
 		}
-		createClient(despatchDoc.eIntegrator, (err, client) => {
-			if(dberr(err, cb)) {
-				// let resField = ''
-				// let QueryDespatchStatus = (despatchIds, cb) => {
-				// 	if(despatchDoc.ioType == 0) {
-				// 		resField = 'QueryOutboxDespatchStatusResult'
-				// 		client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
-				// 	} else {
-				// 		resField = 'QueryInboxDespatchStatusResult'
-				// 		client.QueryInboxDespatchStatus(despatchIds, cb)
-				// 	}
-				// }
-			}
-		})
-		dbModel.despatches.findOne({ _id: despatchDoc._id }, (err, irsaliyeDoc) => {
-			if(dberr(err, cb)) {
-				if(dbnull(irsaliyeDoc, cb)) {
+
+		createClient(integrator, (err, client) => {
+			if(!err) {
+				let func = `Query${ioBox(ioType)}DespatchStatus`
+
+				let baslamaTarihi = (new Date()).addDays(-15).yyyymmdd()
+
+				let options = {
+					page: 1,
+					limit: 10,
+					select: '_id ioType eIntegrator ID uuid issueDate issueTime despatchStatus',
+					sort: { 'issueDate.value': -1, 'ID.value': -1 }
+				}
+
+				if(config.status != 'release') {
+					baslamaTarihi = (new Date()).addDays(-180).yyyymmdd()
+					options.sort = { 'issueDate.value': -1, 'ID.value': -1 }
+				}
+
+				let filter = {
+					ioType: ioType,
+					eIntegrator: integrator._id,
+					despatchStatus: { $nin: ['Approved', 'PartialApproved', 'Declined', 'Canceled', 'Cancelled'] },
+					'uuid.value': { $ne: '' },
+					'issueDate.value': { $gte: baslamaTarihi },
+					checkedDate: { $lte: (new Date()).add('minute', -2) }
+				}
 
 
-					createClient(despatchDoc.eIntegrator, (err, client) => {
+				function calistir(cb) {
+					dbModel.despatches.paginate(filter, options, (err, resp) => {
 						if(dberr(err, cb)) {
-							let resField = ''
-							let QueryDespatchStatus = (despatchIds, cb) => {
-								if(despatchDoc.ioType == 0) {
-									resField = 'QueryOutboxDespatchStatusResult'
-									client.GetOutboxDespatchStatusWithLogs(despatchIds, cb)
-									// client.QueryOutboxDespatchStatus(despatchIds, cb)
-								} else {
-									resField = 'QueryInboxDespatchStatusResult'
-									client.QueryInboxDespatchStatus(despatchIds, cb)
-								}
-							}
-
-
-							let query = {
-								attr: {
-									PageIndex: 0,
-									PageSize: 10
-								},
-								DespatchIds: [despatchDoc.uuid.value]
-							}
-							GetDespatchList(query, (err, data) => {
-								if(dberr(err, cb)) {
-									data = convertSoapObject(data)
-									data = convertAttrNumber(data)
-
-									if(!data.value) return cb(null)
-									if(!data.value.items) return cb(null)
-
-									if(!Array.isArray(data.value.items))
-										data.value.items = [clone(data.value.items)]
-
-									let obj = {
-										_id: despatchDoc._id,
-										uuid: data.value.items[0].despatchId,
-										ID: data.value.items[0].despatchNumber,
-										title: data.value.items[0].targetTitle,
-										vknTckn: data.value.items[0].targetTcknVkn,
-										despatchStatus: data.value.items[0].statusEnum
-									}
-									tempLog(`${despatchDoc.ID.value}_queryDespatchStatus.json`, JSON.stringify(data, null, 2))
-									if(despatchDoc.despatchStatus != data.value.items[0].statusEnum) {
-
-										irsaliyeDoc.despatchStatus = data.value.items[0].statusEnum
-
-										if(irsaliyeDoc.despatchStatus != 'Error') {
-											irsaliyeDoc.despatchErrors = []
-										}
-
-										irsaliyeDoc.save(() => {
-											cb(null, obj)
-										})
-									} else {
-										cb(null, obj)
-									}
+							let despatchIds = []
+							resp.docs.forEach((e) => {
+								if(e.uuid.value) {
+									despatchIds.push({ 'string': e.uuid.value })
 								}
 							})
+							if(despatchIds.length > 0) {
+								client[func]({ despatchIds: despatchIds }, (err, response, rawResponse, soapHeader, rawRequest) => {
+									// soapLog(err, response, rawResponse, soapHeader, rawRequest, func, 'now', ioType)
+									if(!err) {
+										let data = convertSoapObject(response[`${func}Result`])
+										if(!data.attr.isSucceded) {
+											errorLog({ code: `ERR_${func}`, message: data.attr.message })
+										} else {
+											if((data.value || []).length > 0) {
+												iteration(data.value, (item, cb1) => {
+													let doc = resp.docs.find((e) => e.uuid.value === item.attr.despatchId)
+													if(doc) {
+														dbModel.despatches.updateOne({ _id: doc._id }, { $set: { despatchStatus: item.attr.statusEnum, checkedDate: new Date() } }, (err, c) => {
+															if(!err) {
+																if(doc.despatchStatus!=item.attr.statusEnum){
+																	eventLog(`Status_${func} Changed ${doc.ID.value} ${doc.despatchStatus} > ${item.attr.statusEnum}`)
+																}
+															} else {
+																errorLog(`ERR_${func}`, err.message)
+															}
+															cb1()
+														})
+
+													} else {
+														cb1()
+													}
+												}, 0, true, (err) => {
+													if(resp.page < resp.totalPages) {
+														options.page++
+														setTimeout(calistir, 1000, cb)
+													} else {
+														cb()
+													}
+												})
+												return
+											} else {
+												//eventLog(`${func} data:`,data)
+											}
+										}
+									} else {
+										errorLog({ code: `ERR_${func}`, message: err.message })
+									}
+									if(resp.page < resp.totalPages) {
+										options.page++
+										setTimeout(calistir, 1000, cb)
+									} else {
+										cb()
+									}
+								})
+							} else {
+								if(resp.page < resp.totalPages) {
+									options.page++
+									setTimeout(calistir, 1000, cb)
+								} else {
+									cb()
+								}
+							}
 						}
 					})
 				}
+
+				calistir(() => {
+					callback()
+				})
+			} else {
+				callback(err)
 			}
 		})
+
 	} catch (e) {
-		cb(e)
+		console.log(`try error :`, e)
+		callback(e)
 	}
 }
 
@@ -708,6 +735,7 @@ function checkDespatchStatus(dbModel, ioType, srvcName, callback) {
 		}
 	})
 }
+
 
 function checkDespatcheStatus111(dbModel, srvcName, callback) {
 	let logPrefix = `${dbModel.nameLog} ${srvcName.green}`
@@ -770,27 +798,27 @@ function checkDespatcheStatus111(dbModel, srvcName, callback) {
 	})
 }
 
-function soapLog(err, resp, rawResponse, soapHeader, rawRequest, funcName='soapLog', docId='now', ioType=-1){
+function soapLog(err, resp, rawResponse, soapHeader, rawRequest, funcName = 'soapLog', docId = 'now', ioType = -1) {
 
-	let box=''
+	let box = ''
 
-	if(ioType>-1)
-		box=`${ioBox(ioType)}_`
-	if(docId=='now'){
-		docId=(new Date()).yyyymmddhhmmss('_').replaceAll(':','')
-	}else if(docId=='today'){
-		docId=(new Date()).yyyymmdd()
+	if(ioType > -1)
+		box = `${ioBox(ioType)}_`
+	if(docId == 'now') {
+		docId = (new Date()).yyyymmddhhmmss('_').replaceAll(':', '')
+	} else if(docId == 'today') {
+		docId = (new Date()).yyyymmdd()
 	}
-	if(docId!='')
-		docId='_' + docId
+	if(docId != '')
+		docId = '_' + docId
 
-	if(!err){
-		// tempLog(`${funcName}_${box}rawRequest${docId}.xml`, rawRequest)
-		// tempLog(`${funcName}_${box}rawResponse${docId}.xml`, rawResponse)
-		// tempLog(`${funcName}_${box}soapHeader${docId}.json`, JSON.stringify(soapHeader, null, 2))
-		// tempLog(`${funcName}_${box}resp${docId}.json`, JSON.stringify(resp || {}, null, 2))
-		// tempLog(`${funcName}_${box}response_err${docId}.xml`, 'hata yok')
-	}else{
+	if(!err) {
+		tempLog(`${funcName}_${box}rawRequest${docId}.xml`, rawRequest)
+		tempLog(`${funcName}_${box}rawResponse${docId}.xml`, rawResponse)
+		tempLog(`${funcName}_${box}soapHeader${docId}.json`, JSON.stringify(soapHeader, null, 2))
+		tempLog(`${funcName}_${box}resp${docId}.json`, JSON.stringify(resp || {}, null, 2))
+		tempLog(`${funcName}_${box}response_err${docId}.xml`, 'hata yok')
+	} else {
 		tempLog(`${funcName}_${box}response_err${docId}.xml`, err.response.config.data)
 		errorLog(`${funcName}_${box}response err${docId} :`, err)
 	}
@@ -798,6 +826,8 @@ function soapLog(err, resp, rawResponse, soapHeader, rawRequest, funcName='soapL
 }
 
 exports.start = () => {
+
+	config.repeatInterval=5000
 
 	runServiceOnAllUserDb({
 		filter: { 'services.eIntegration.eDespatch': true },
@@ -817,25 +847,23 @@ exports.start = () => {
 		filter: { 'services.eIntegration.eDespatch': true },
 		serviceFunc: (dbModel, cb) => { checkDespatchStatus(dbModel, 0, `eDespatch/${'checkStatus'.cyan}/outbox`, cb) },
 		name: 'eDespatch/checkStatus/outbox',
-		repeatInterval: 3000 //config.repeatInterval || 60000
+		repeatInterval: config.repeatInterval || 60000
 	})
 
 	runServiceOnAllUserDb({
-		filter:{'services.eIntegration.eDespatch':true},
-		serviceFunc:(dbModel,cb)=>{ checkDespatchStatus(dbModel,1, `eDespatch/${'checkStatus'.zebra}/inbox`,cb) },
-		name:'eDespatch/checkStatus/inbox',
-		repeatInterval:3000 //config.repeatInterval || 60000
+		filter: { 'services.eIntegration.eDespatch': true },
+		serviceFunc: (dbModel, cb) => { checkDespatchStatus(dbModel, 1, `eDespatch/${'checkStatus'.cyan}/inbox`, cb) },
+		name: 'eDespatch/checkStatus/inbox',
+		repeatInterval: config.repeatInterval || 60000
 	})
 
 
 
 	runServiceOnAllUserDb({
 		filter: { 'services.eIntegration.eDespatch': true },
-		serviceFunc: (dbModel, cb) => {
-			task_sentToGib(dbModel, `eDespatch/${'task'.cyan}/sentToGib`, cb)
-		},
+		serviceFunc: (dbModel, cb) => {	task_sentToGib(dbModel, `eDespatch/${'task'.cyan}/sentToGib`, cb)	},
 		name: 'eDespatch/task/sentToGib',
-		repeatInterval: 3000 //config.repeatInterval || 60000
+		repeatInterval: config.repeatInterval || 60000
 	})
 
 	// runServiceOnAllUserDb({

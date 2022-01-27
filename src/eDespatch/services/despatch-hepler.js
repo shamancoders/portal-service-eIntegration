@@ -16,16 +16,17 @@ exports.gonderilecekIrsaliyeAlanlariniDuzenle = function(despatchDoc, xsltData) 
 	despatchDoc.uuid.value = uuid.v4()
 
 	if(xsltData) {
-		tempLog('xsltData.xslt',xsltData)
+		// tempLog('xsltData.xslt',xsltData)
 		despatchDoc.additionalDocumentReference = [{
-			ID: { value: uuid.v4() },
+			// ID: { value: uuid.v4() },
+			ID: { value: '9026a79e-e9c1-412d-ac0a-eeeeddddccbb' },
 			issueDate: { value: despatchDoc.issueDate.value },
-			documentType: { value: 'XSLT' },
-			documentTypeCode: { value: 'XSLT' },
+			documentType: { value: 'Xslt' },
+			// documentTypeCode: { value: 'XSLT' },
 			attachment: {
 				embeddedDocumentBinaryObject: {
 					attr: {
-						filename: 'tr216com.xslt',
+						filename: `${despatchDoc.ID.value}.xslt`,
 						characterSetCode: 'UTF-8',
 						encodingCode: 'Base64',
 						mimeCode: 'application/xml'
@@ -170,6 +171,7 @@ function despatchAdviceTypeSiralama(doc) {
 	return doc2
 }
 
+
 function renameKey(key, obj, parentObj) {
 
 	if(key.indexOf(':') > -1)
@@ -191,13 +193,14 @@ function renameKey(key, obj, parentObj) {
 		case 'CustomizationID':	return 'cbc:CustomizationID'
 
 		case 'schemeID':
-			return 'schemeID'
 		case 'unitCode':
-			return 'unitCode'
+		case 'mimeCode':
+		case 'filename':
+		case 'encodingCode':
+		case 'characterSetCode':
 		case 'value':
-			return 'value'
 		case 'attr':
-			return 'attr'
+			return key
 	}
 	if(key.length >= 2) {
 		key = key[0].toUpperCase() + key.substr(1, key.length - 1)
