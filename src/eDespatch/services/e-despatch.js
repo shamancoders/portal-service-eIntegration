@@ -1,3 +1,4 @@
+'use strict'
 // var SinifGrubu = require('./uyumsoft/DespatchIntegration.class.js')
 var despatchHelper = require('./despatch-hepler.js')
 let downloadInterval = config.downloadInterval || 5000
@@ -591,6 +592,9 @@ function convertSoapObject(obj, dateConvertor) {
 
 function queryDespatchStatus(dbModel, ioType, integrator, srvcName, callback) {
 	try {
+		let mongoPagerInterval=5000
+		let mongoUpdaterInterval=500
+
 		if(config.status != 'release') {
 			integrator.party.partyIdentification[0].ID.value = '9000068418'
 			integrator.despatch.url = 'https://efatura-test.uyumsoft.com.tr/Services/DespatchIntegration?wsdl'
@@ -661,10 +665,10 @@ function queryDespatchStatus(dbModel, ioType, integrator, srvcName, callback) {
 													} else {
 														cb1()
 													}
-												}, 0, true, (err) => {
+												}, mongoUpdaterInterval, true, (err) => {
 													if(resp.page < resp.totalPages) {
 														options.page++
-														setTimeout(calistir, 1000, cb)
+														setTimeout(calistir, mongoPagerInterval, cb)
 													} else {
 														cb()
 													}
@@ -679,7 +683,7 @@ function queryDespatchStatus(dbModel, ioType, integrator, srvcName, callback) {
 									}
 									if(resp.page < resp.totalPages) {
 										options.page++
-										setTimeout(calistir, 1000, cb)
+										setTimeout(calistir, mongoPagerInterval, cb)
 									} else {
 										cb()
 									}
@@ -687,7 +691,7 @@ function queryDespatchStatus(dbModel, ioType, integrator, srvcName, callback) {
 							} else {
 								if(resp.page < resp.totalPages) {
 									options.page++
-									setTimeout(calistir, 1000, cb)
+									setTimeout(calistir, mongoPagerInterval, cb)
 								} else {
 									cb()
 								}
@@ -831,7 +835,7 @@ exports.start = () => {
 
 	runServiceOnAllUserDb({
 		filter: { 'services.eIntegration.eDespatch': true },
-		serviceFunc: (dbModel, cb) => { downloadDespatches(dbModel, 0, `eDespatch/${'download'.cyan}/outbox`, cb) },
+		serviceFunc: (dbModel, cb) => { downloadDespatches(dbModel, 0, `eDespatch/${'download'.brightCyan}/outbox`, cb) },
 		name: 'eDespatch/download/outbox',
 		repeatInterval: config.repeatInterval || 60000
 	})
@@ -874,4 +878,6 @@ exports.start = () => {
 	// 	name:'eDespatch/task/sendReceiptAdvice',
 	// 	repeatInterval:config.repeatInterval || 60000
 	// })
+
+
 }
