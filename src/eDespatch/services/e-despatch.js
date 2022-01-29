@@ -1,4 +1,4 @@
-'use strict'
+
 // var SinifGrubu = require('./uyumsoft/DespatchIntegration.class.js')
 var despatchHelper = require('./despatch-hepler.js')
 let downloadInterval = config.downloadInterval || 5000
